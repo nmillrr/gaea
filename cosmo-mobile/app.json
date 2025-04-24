@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Cosmo",
+    "slug": "cosmo-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cosmo needs access to your camera to take photos for location guessing",
+        "NSLocationWhenInUseUsageDescription": "Cosmo needs access to your location to record photo coordinates and make guesses",
+        "NSPhotoLibraryUsageDescription": "Cosmo needs access to your photo library to allow you to upload photos"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cosmo needs access to your camera to take photos for location guessing"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Cosmo needs access to your location to record photo coordinates and make guesses"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cosmo needs access to your photo library to allow you to upload photos"
+        }
+      ]
+    ]
+  }
+}
