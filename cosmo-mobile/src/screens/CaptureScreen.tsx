@@ -1,24 +1,63 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, ActivityIndicator, Alert, Platform } from 'react-native';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
+  ActivityIndicator, 
+  Alert, 
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
+} from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { format } from 'date-fns';
 
 import { RootStackParamList } from '../../App';
-import axiosInstance from '../api/axios';
+import { RootState, AppDispatch } from '../store';
+import { 
+  setPhotoUri, 
+  setLocation, 
+  setCaption, 
+  clearCapture, 
+  uploadPhoto, 
+  checkUploadAllowed
+} from '../store/slices/captureSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Capture'>;
 
 const CaptureScreen: React.FC<Props> = ({ navigation }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { 
+    photoUri, 
+    location, 
+    caption, 
+    canUpload, 
+    nextUploadTime, 
+    isUploading, 
+    isCheckingUpload, 
+    uploadSuccess, 
+    error 
+  } = useSelector((state: RootState) => state.capture);
+  
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [type, setType] = useState(CameraType.back);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [stage, setStage] = useState<'camera' | 'preview' | 'caption'>('camera');
   const cameraRef = useRef<Camera | null>(null);
 
+  // Check if user can upload when component mounts
+  useEffect(() => {
+    dispatch(checkUploadAllowed());
+  }, [dispatch]);
+
+  // Request permissions and set up camera
   useEffect(() => {
     (async () => {
       // Request camera permissions
@@ -41,14 +80,33 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
         getCurrentLocation();
       }
     })();
-  }, []);
+
+    // Clean up on unmount
+    return () => {
+      dispatch(clearCapture());
+    };
+  }, [dispatch]);
+
+  // Navigate to Home if upload is successful
+  useEffect(() => {
+    if (uploadSuccess) {
+      navigation.navigate('Home');
+    }
+  }, [uploadSuccess, navigation]);
+
+  // Display error message if upload fails
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', error);
+    }
+  }, [error]);
 
   const getCurrentLocation = async () => {
     try {
       const currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
-      setLocation(currentLocation);
+      dispatch(setLocation(currentLocation));
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert(
@@ -65,7 +123,8 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
           quality: 0.8,
           skipProcessing: false,
         });
-        setCapturedImage(photo.uri);
+        dispatch(setPhotoUri(photo.uri));
+        setStage('preview');
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to take picture');
@@ -82,63 +141,77 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setCapturedImage(result.assets[0].uri);
+      dispatch(setPhotoUri(result.assets[0].uri));
+      setStage('preview');
     }
   };
 
-  const uploadPhoto = async () => {
-    if (!capturedImage || !location) {
+  const handleCaptionChange = (text: string) => {
+    dispatch(setCaption(text));
+  };
+
+  const handleContinueToCaption = () => {
+    if (!photoUri || !location) {
+      Alert.alert('Error', 'Image or location data is missing');
+      return;
+    }
+    setStage('caption');
+  };
+
+  const handleSubmit = () => {
+    if (!photoUri || !location) {
       Alert.alert('Error', 'Image or location data is missing');
       return;
     }
 
-    // Create form data for upload
-    const formData = new FormData();
-    
-    // Append the image file
-    const filename = capturedImage.split('/').pop() || 'photo.jpg';
-    const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : 'image';
-    
-    formData.append('photo', {
-      uri: Platform.OS === 'ios' ? capturedImage.replace('file://', '') : capturedImage,
-      name: filename,
-      type,
-    } as any);
-    
-    // Append location data
-    formData.append('latitude', String(location.coords.latitude));
-    formData.append('longitude', String(location.coords.longitude));
-
-    try {
-      setUploading(true);
-      
-      // Use axios to upload
-      const response = await axiosInstance.post('/photos', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      Alert.alert('Success', 'Photo uploaded successfully!');
-      
-      // Navigate back to home
-      navigation.navigate('Home');
-    } catch (error: any) {
-      console.error('Upload error:', error.response?.data || error);
-      Alert.alert(
-        'Upload Failed',
-        error.response?.data?.message || 'Failed to upload photo. Please try again.'
-      );
-    } finally {
-      setUploading(false);
-    }
+    dispatch(uploadPhoto({
+      photoUri,
+      location: {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      },
+      caption: caption.trim() || undefined
+    }));
   };
 
   const retake = () => {
-    setCapturedImage(null);
+    dispatch(setPhotoUri(null));
+    setStage('camera');
   };
 
+  // Render loading state while checking if user can upload
+  if (isCheckingUpload) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#3498db" />
+        <Text style={styles.text}>Checking upload status...</Text>
+      </View>
+    );
+  }
+
+  // Render message if user cannot upload
+  if (!canUpload && nextUploadTime) {
+    const nextUploadDate = new Date(nextUploadTime);
+    const formattedTime = format(nextUploadDate, 'MMM dd, yyyy h:mm a');
+    
+    return (
+      <View style={[styles.container, { backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <Text style={styles.limitTitle}>Daily Upload Limit Reached</Text>
+        <Text style={styles.limitText}>
+          You can only upload one photo per day. You can upload again at:
+        </Text>
+        <Text style={styles.timeText}>{formattedTime}</Text>
+        <TouchableOpacity
+          style={[styles.button, { marginTop: 30 }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Render permission loading state
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -148,6 +221,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
+  // Render permission denied state
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
@@ -164,12 +238,70 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {capturedImage ? (
-        // Preview screen
+  // Render caption input screen
+  if (stage === 'caption') {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView contentContainerStyle={styles.captionContainer}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => setStage('preview')}>
+                <Text style={styles.backButton}>Back</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>New Post</Text>
+              <View style={{ width: 40 }} />
+            </View>
+            
+            <View style={styles.imageRow}>
+              {photoUri && (
+                <Image source={{ uri: photoUri }} style={styles.thumbnailImage} />
+              )}
+              <TextInput
+                style={styles.captionInput}
+                placeholder="Write a caption..."
+                value={caption}
+                onChangeText={handleCaptionChange}
+                multiline
+                maxLength={200}
+              />
+            </View>
+            
+            <View style={styles.locationDisplay}>
+              {location && (
+                <Text style={styles.locationDisplayText}>
+                  Location: {location.coords.latitude.toFixed(4)}, {location.coords.longitude.toFixed(4)}
+                </Text>
+              )}
+            </View>
+            
+            <View style={styles.captionActions}>
+              <TouchableOpacity
+                style={[styles.button, styles.submitButton, isUploading && styles.disabledButton]}
+                onPress={handleSubmit}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Share</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // Render preview screen
+  if (stage === 'preview' && photoUri) {
+    return (
+      <SafeAreaView style={styles.container}>
         <View style={styles.preview}>
-          <Image source={{ uri: capturedImage }} style={styles.previewImage} />
+          <Image source={{ uri: photoUri }} style={styles.previewImage} />
           
           <View style={styles.locationInfo}>
             {location ? (
@@ -193,62 +325,62 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
             
             <TouchableOpacity 
               style={[styles.button, styles.uploadButton]} 
-              onPress={uploadPhoto}
-              disabled={uploading || !location}
+              onPress={handleContinueToCaption}
+              disabled={!location}
             >
-              {uploading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Upload</Text>
-              )}
+              <Text style={styles.buttonText}>Continue</Text>
             </TouchableOpacity>
           </View>
         </View>
-      ) : (
-        // Camera screen
-        <View style={styles.cameraContainer}>
-          <Camera 
-            style={styles.camera} 
-            type={type}
-            ref={cameraRef}
-          >
-            <View style={styles.cameraControls}>
-              <TouchableOpacity
-                style={styles.flipButton}
-                onPress={() => {
-                  setType(
-                    type === CameraType.back
-                      ? CameraType.front
-                      : CameraType.back
-                  );
-                }}
-              >
-                <Text style={styles.flipText}>Flip</Text>
-              </TouchableOpacity>
-            </View>
-          </Camera>
+      </SafeAreaView>
+    );
+  }
+
+  // Render camera screen (default)
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.cameraContainer}>
+        <Camera 
+          style={styles.camera} 
+          type={type}
+          ref={cameraRef}
+        >
+          <View style={styles.cameraControls}>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={() => {
+                setType(
+                  type === CameraType.back
+                    ? CameraType.front
+                    : CameraType.back
+                );
+              }}
+            >
+              <Text style={styles.flipText}>Flip</Text>
+            </TouchableOpacity>
+          </View>
+        </Camera>
+        
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+            <Text style={styles.buttonText}>Gallery</Text>
+          </TouchableOpacity>
           
-          <View style={styles.controls}>
-            <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-              <Text style={styles.buttonText}>Gallery</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.captureButton}
-              onPress={takePicture}
-            >
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.captureButton}
+            onPress={takePicture}
+          >
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -261,6 +393,7 @@ const styles = StyleSheet.create({
   text: {
     color: 'white',
     marginTop: 10,
+    textAlign: 'center',
   },
   errorText: {
     color: 'white',
@@ -363,6 +496,88 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 5,
     fontWeight: 'bold',
+  },
+  // Caption screen styles
+  captionContainer: {
+    flexGrow: 1,
+    padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    color: '#3498db',
+    fontSize: 16,
+  },
+  imageRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  thumbnailImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  captionInput: {
+    flex: 1,
+    height: 100,
+    padding: 8,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 4,
+    textAlignVertical: 'top',
+  },
+  locationDisplay: {
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 4,
+    marginBottom: 24,
+  },
+  locationDisplayText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  captionActions: {
+    marginTop: 'auto',
+    paddingVertical: 16,
+  },
+  submitButton: {
+    alignSelf: 'stretch',
+    paddingVertical: 12,
+    backgroundColor: '#3498db',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#bdc3c7',
+  },
+  // Upload limit screen styles
+  limitTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  limitText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  timeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#3498db',
   },
 });
 

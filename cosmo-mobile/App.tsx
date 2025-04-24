@@ -18,6 +18,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import FeedScreen from './src/screens/FeedScreen';
 import CaptureScreen from './src/screens/CaptureScreen';
 import GuessScreen from './src/screens/GuessScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   Register: undefined;
   Onboarding: undefined;
   Home: undefined;
+  Feed: undefined;
   Capture: undefined;
   Guess: { photoId: string };
   Profile: { userId?: string };
@@ -52,7 +54,8 @@ export default function App() {
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Home" component={FeedScreen} />
+              <Stack.Screen name="Feed" component={FeedScreen} />
               <Stack.Screen name="Capture" component={CaptureScreen} />
               <Stack.Screen name="Guess" component={GuessScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
@@ -64,6 +67,7 @@ export default function App() {
       </SafeAreaProvider>
     </Provider>
   );
+}
 
 const styles = StyleSheet.create({
   container: {
