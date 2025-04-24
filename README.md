@@ -60,6 +60,10 @@ The database schema consists of the following tables:
 - `POST /friends/accept` - Accept a friendship request (authenticated)
 - `GET /friends` - List all accepted friends (authenticated)
 
+### Notifications
+- `POST /notifications/test` - Send a test notification 
+- `POST /notifications/register` - Register a device token for push notifications (authenticated)
+
 ### Protected Routes
 - `GET /api/me` - Get current user info (authenticated)
 

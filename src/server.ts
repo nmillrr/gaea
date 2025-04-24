@@ -9,6 +9,7 @@ import protectedRoutes from './routes/protected';
 import photoRoutes from './routes/photos';
 import guessRoutes from './routes/guess';
 import friendRoutes from './routes/friends';
+import notificationRoutes from './routes/notifications';
 
 // Load environment variables
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api', protectedRoutes);
 app.use('/photos', photoRoutes);
 app.use('/photos', guessRoutes);
 app.use('/friends', friendRoutes);
+app.use('/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/', (_req: Request, res: Response) => {
