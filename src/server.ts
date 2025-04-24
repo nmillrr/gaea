@@ -2,9 +2,13 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { initializeDatabase } from './db/init';
+import { securityMiddleware } from './middleware/security';
+import { apiRateLimiter, authRateLimiter } from './middleware/rateLimit';
 import authRoutes from './routes/auth';
 import protectedRoutes from './routes/protected';
 import photoRoutes from './routes/photos';
+import guessRoutes from './routes/guess';
+import friendRoutes from './routes/friends';
 
 // Load environment variables
 dotenv.config();
@@ -13,14 +17,22 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middleware
+// Security middleware
+app.use(securityMiddleware);
+
+// Basic middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/auth', authRoutes);
+// Global rate limiter
+app.use(apiRateLimiter);
+
+// Routes with rate limiting
+app.use('/auth', authRateLimiter, authRoutes);
 app.use('/api', protectedRoutes);
 app.use('/photos', photoRoutes);
+app.use('/photos', guessRoutes);
+app.use('/friends', friendRoutes);
 
 // Health check endpoint
 app.get('/', (_req: Request, res: Response) => {

@@ -46,7 +46,19 @@ The database schema consists of the following tables:
 ### Photos
 - `POST /photos` - Upload a new photo (authenticated)
 - `GET /photos` - Get all user photos (authenticated)
+- `GET /photos/feed` - Get photos from friends (authenticated)
 - `GET /photos/:id` - Get a specific photo (authenticated)
+- `GET /photos/:photoId/leaderboard` - Get leaderboard for a photo (authenticated)
+
+### Guesses
+- `POST /photos/:photoId/guess` - Submit a guess for a photo (authenticated)
+- `GET /photos/:photoId/guess` - Get the user's guess for a photo (authenticated)
+- `GET /photos/:photoId/guesses` - Get all guesses for a photo (authenticated)
+
+### Friends
+- `POST /friends/request` - Send a friendship request (authenticated)
+- `POST /friends/accept` - Accept a friendship request (authenticated)
+- `GET /friends` - List all accepted friends (authenticated)
 
 ### Protected Routes
 - `GET /api/me` - Get current user info (authenticated)
@@ -107,9 +119,13 @@ The photo upload endpoint:
 
 - Password hashing with bcrypt
 - JWT-based authentication with 7-day expiration
-- HTTPS-only cookies
+- HTTPS enforcement via middleware
+- Helmet for secure HTTP headers
+- Rate limiting on sensitive endpoints
 - EXIF metadata stripping for privacy
 - File size and type validation
+- Content Security Policy implementation
+- Protection against XSS, clickjacking, and other attacks
 - Input sanitization
 
 ## Testing
