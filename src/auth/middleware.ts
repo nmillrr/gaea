@@ -1,8 +1,8 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AuthRequest, UserPayload } from '../types';
+import { UserPayload } from '../types';
 
-export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
   // Get the authorization header
   const authHeader = req.headers.authorization;
 
@@ -36,7 +36,7 @@ export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunct
 };
 
 // Optional authentication middleware - doesn't return 401 if no token is provided
-export const optionalAuthenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const optionalAuthenticateJWT = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {

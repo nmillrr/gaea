@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initializeDatabase } from './db/init';
 import authRoutes from './routes/auth';
+import protectedRoutes from './routes/protected';
+import photoRoutes from './routes/photos';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +19,8 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/api', protectedRoutes);
+app.use('/photos', photoRoutes);
 
 // Health check endpoint
 app.get('/', (_req: Request, res: Response) => {

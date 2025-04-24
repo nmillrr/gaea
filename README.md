@@ -9,7 +9,8 @@ A Node.js backend API for the Cosmo application built with Express and TypeScrip
 - PostgreSQL database with TypeORM
 - PostGIS extension for geospatial queries
 - JWT authentication
-- File uploads to cloud storage (AWS S3 or Google Cloud Storage)
+- Secure file uploads to AWS S3
+- EXIF metadata stripping for privacy
 - CORS enabled
 
 ## Database Schema
@@ -36,13 +37,27 @@ The database schema consists of the following tables:
    - User comments on photos
    - Fields: id, photo_id, user_id, text, created_at
 
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login and receive JWT token
+
+### Photos
+- `POST /photos` - Upload a new photo (authenticated)
+- `GET /photos` - Get all user photos (authenticated)
+- `GET /photos/:id` - Get a specific photo (authenticated)
+
+### Protected Routes
+- `GET /api/me` - Get current user info (authenticated)
+
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js (v14+ recommended)
 - PostgreSQL with PostGIS extension
-- AWS account or Google Cloud account (for photo storage)
+- AWS account (for photo storage)
 
 ### Installation
 
@@ -61,7 +76,7 @@ The database schema consists of the following tables:
    ```
    cp .env.example .env
    ```
-   Edit the `.env` file with your database credentials and other configuration options.
+   Edit the `.env` file with your database credentials and AWS S3 configuration.
 
 4. Build the application
    ```
@@ -77,23 +92,32 @@ The database schema consists of the following tables:
    npm run dev
    ```
 
-## API Endpoints
+## Photo Upload Details
 
-- `GET /` - Health check endpoint
-- (Other endpoints will be documented as they are implemented)
+The photo upload endpoint:
+- Accepts images via multipart/form-data
+- Limits upload size to 10MB
+- Only allows image file types (JPEG, PNG, GIF, WebP)
+- Strips EXIF metadata for privacy
+- Stores files in date-based folders (YYYY/MM/DD)
+- Requires latitude/longitude coordinates
+- Returns the photo's S3 URL and metadata
 
-## Development
+## Security Features
 
-### Scripts
+- Password hashing with bcrypt
+- JWT-based authentication with 7-day expiration
+- HTTPS-only cookies
+- EXIF metadata stripping for privacy
+- File size and type validation
+- Input sanitization
 
-- `npm run dev` - Start development server with hot reloading
-- `npm run build` - Build the application
-- `npm start` - Start the built application
-- `npm run lint` - Run linting
+## Testing
 
-### Database Initialization
-
-The database schema is managed using TypeORM entities. When the server starts, it automatically initializes the database connection and creates the necessary tables if they don't exist.
+Run tests with:
+```
+npm test
+```
 
 ## License
 
