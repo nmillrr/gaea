@@ -33,10 +33,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     dispatch(clearError());
   }, [dispatch]);
   
-  // Navigate to home if authenticated
+  // Navigate to onboarding screen if authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigation.replace('Home');
+      navigation.replace('Onboarding');
     }
   }, [isAuthenticated, navigation]);
   

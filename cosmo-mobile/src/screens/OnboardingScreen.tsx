@@ -1,93 +1,182 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TextInput,
+  TouchableOpacity, 
+  Image, 
+  Platform,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  ScrollView
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootState } from '../store';
 import { RootStackParamList } from '../../App';
+import { updateUserProfile, uploadAvatar } from '../store/slices/authSlice';
+import { AppDispatch } from '../store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
-const { width } = Dimensions.get('window');
-
 const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isLoading, error } = useSelector((state: RootState) => state.auth);
   
-  const onboardingSteps = [
-    {
-      title: 'Welcome to Cosmo',
-      description: 'Explore the world through photos and test your geography skills by guessing locations.',
-      image: require('../assets/placeholder.png'), // Replace with actual onboarding image
-    },
-    {
-      title: 'Share Your World',
-      description: 'Take photos of interesting places and challenge your friends to guess the location.',
-      image: require('../assets/placeholder.png'), // Replace with actual onboarding image
-    },
-    {
-      title: 'Connect with Friends',
-      description: 'Add friends, see their photos, and compete on the leaderboard.',
-      image: require('../assets/placeholder.png'), // Replace with actual onboarding image
-    },
-  ];
-  
-  const [currentStep, setCurrentStep] = React.useState(0);
-  
-  const handleNext = () => {
-    if (currentStep < onboardingSteps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      // Navigate to the home screen when onboarding is complete
-      navigation.replace('Home');
+  const [username, setUsername] = useState<string>(user?.username || '');
+  const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl || null);
+  const [imageFile, setImageFile] = useState<any>(null);
+  const [usernameError, setUsernameError] = useState<string>('');
+  const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permission Required',
+            'Sorry, we need camera roll permissions to upload an avatar!'
+          );
+        }
+      }
+    })();
+  }, []);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
+      setImageFile({
+        uri: result.assets[0].uri,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      });
     }
   };
-  
-  const handleSkip = () => {
-    // Skip directly to the home screen
-    navigation.replace('Home');
+
+  const validateForm = (): boolean => {
+    let isValid = true;
+
+    // Validate username
+    if (!username.trim()) {
+      setUsernameError('Username is required');
+      isValid = false;
+    } else if (username.length < 3) {
+      setUsernameError('Username must be at least 3 characters');
+      isValid = false;
+    } else {
+      setUsernameError('');
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    setFormSubmitted(true);
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      // First upload avatar if exists
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('avatar', imageFile);
+        
+        const uploadResult = await dispatch(uploadAvatar(formData)).unwrap();
+        
+        // Update profile with username and avatar URL
+        await dispatch(updateUserProfile({ 
+          username,
+          avatarUrl: uploadResult.avatarUrl
+        })).unwrap();
+      } else {
+        // Just update the username if no avatar selected
+        await dispatch(updateUserProfile({ username })).unwrap();
+      }
+      
+      // Navigate to home screen upon success
+      navigation.replace('Home');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    }
   };
   
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.progressContainer}>
-            {onboardingSteps.map((_, index) => (
-              <View 
-                key={index} 
-                style={[
-                  styles.progressDot, 
-                  { backgroundColor: index === currentStep ? '#3498db' : '#ddd' }
-                ]} 
-              />
-            ))}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Complete Your Profile</Text>
+            <Text style={styles.headerSubtitle}>Set up your profile to get started</Text>
           </View>
           
-          <TouchableOpacity onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.imageContainer}>
-          <Image 
-            source={onboardingSteps[currentStep].image} 
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </View>
-        
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>{onboardingSteps[currentStep].title}</Text>
-          <Text style={styles.description}>{onboardingSteps[currentStep].description}</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>
-            {currentStep === onboardingSteps.length - 1 ? 'Get Started' : 'Next'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarPlaceholderText}>Add Photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <Text style={styles.avatarHelperText}>Tap to choose an avatar</Text>
+          </View>
+          
+          <View style={styles.formContainer}>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={[
+                styles.input,
+                formSubmitted && usernameError ? styles.inputError : null
+              ]}
+              placeholder="Enter your username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
+            {formSubmitted && usernameError ? (
+              <Text style={styles.errorText}>{usernameError}</Text>
+            ) : null}
+          </View>
+          
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3498db" />
+              <Text style={styles.loadingText}>Updating profile...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              <Text style={styles.buttonText}>Complete Profile</Text>
+            </TouchableOpacity>
+          )}
+          
+          {error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -98,53 +187,79 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 24,
+    flexGrow: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-  },
-  progressDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  skipText: {
-    color: '#3498db',
-    fontSize: 16,
-  },
-  imageContainer: {
-    flex: 3,
-    justifyContent: 'center',
+    marginBottom: 32,
     alignItems: 'center',
   },
-  image: {
-    width: width * 0.8,
-    height: width * 0.8,
-  },
-  textContainer: {
-    flex: 2,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 24,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  description: {
+  headerSubtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 24,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  avatarButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+  },
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    backgroundColor: '#e1e4e8',
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarPlaceholderText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  avatarHelperText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  formContainer: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f4f4f4',
+    height: 50,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e1e4e8',
+  },
+  inputError: {
+    borderColor: '#ff3b30',
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: 14,
+    marginTop: 4,
   },
   button: {
     backgroundColor: '#3498db',
@@ -152,12 +267,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 16,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
 });
 

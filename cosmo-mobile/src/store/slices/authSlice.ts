@@ -28,6 +28,11 @@ interface RegisterCredentials {
   password: string;
 }
 
+interface UpdateProfileData {
+  username?: string;
+  avatarUrl?: string;
+}
+
 interface AuthResponse {
   user: User;
   token: string;
@@ -76,6 +81,34 @@ export const logout = createAsyncThunk(
     // Remove the token from secure storage
     await removeToken();
     return true;
+  }
+);
+
+export const updateUserProfile = createAsyncThunk<User, UpdateProfileData>(
+  'auth/updateProfile',
+  async (profileData, { rejectWithValue }) => {
+    try {
+      const response = await authApi.updateProfile(profileData);
+      return response.user;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Profile update failed. Please try again.'
+      );
+    }
+  }
+);
+
+export const uploadAvatar = createAsyncThunk<{ avatarUrl: string }, FormData>(
+  'auth/uploadAvatar',
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await authApi.uploadAvatar(formData);
+      return response;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Avatar upload failed. Please try again.'
+      );
+    }
   }
 );
 
@@ -138,6 +171,38 @@ export const authSlice = createSlice({
     builder.addCase(logout.fulfilled, (state) => {
       state.user = null;
       state.isAuthenticated = false;
+    });
+
+    // Update profile cases
+    builder.addCase(updateUserProfile.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(updateUserProfile.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.user = action.payload;
+      state.error = null;
+    });
+    builder.addCase(updateUserProfile.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
+    });
+
+    // Upload avatar cases
+    builder.addCase(uploadAvatar.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(uploadAvatar.fulfilled, (state, action) => {
+      state.isLoading = false;
+      if (state.user) {
+        state.user.avatarUrl = action.payload.avatarUrl;
+      }
+      state.error = null;
+    });
+    builder.addCase(uploadAvatar.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
     });
   },
 });

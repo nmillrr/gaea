@@ -11,6 +11,11 @@ interface RegisterData {
   username: string;
 }
 
+interface UpdateProfileData {
+  username?: string;
+  avatarUrl?: string;
+}
+
 export const authApi = {
   login: async (data: LoginData) => {
     const response = await axiosInstance.post('/auth/login', data);
@@ -23,7 +28,21 @@ export const authApi = {
   },
   
   getUserProfile: async () => {
-    const response = await axiosInstance.get('/api/me');
+    const response = await axiosInstance.get('/users/me');
+    return response.data;
+  },
+
+  updateProfile: async (data: UpdateProfileData) => {
+    const response = await axiosInstance.post('/users/me', data);
+    return response.data;
+  },
+
+  uploadAvatar: async (formData: FormData) => {
+    const response = await axiosInstance.post('/users/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };
