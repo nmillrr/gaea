@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { store } from '../store';
+import { getToken } from '../utils/secureStorage';
 
 // Create an Axios instance with custom configuration
 const API_URL = 'http://localhost:4000';  // Replace with your actual API URL
@@ -13,9 +13,9 @@ const axiosInstance = axios.create({
 
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
-  (config) => {
-    // Get the auth token from store
-    const token = store.getState().auth.token;
+  async (config) => {
+    // Get the auth token from secure storage
+    const token = await getToken();
     
     // If token exists, add it to the headers
     if (token) {

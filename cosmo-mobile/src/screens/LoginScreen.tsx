@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootState } from '../store';
-import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
-import { authApi } from '../api/authApi';
+import { RootState, AppDispatch } from '../store';
+import { login, clearError } from '../store/slices/authSlice';
 import { RootStackParamList } from '../../App';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
@@ -15,76 +25,115 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  const dispatch = useDispatch();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated, isLoading, error } = useSelector((state: RootState) => state.auth);
   
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+  // Clear any errors when component mounts
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+  
+  // Navigate to home if authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigation.replace('Home');
+    }
+  }, [isAuthenticated, navigation]);
+  
+  // Display error message if auth fails
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Login Error', error);
+    }
+  }, [error]);
+  
+  const validateInputs = (): boolean => {
+    // Basic validation
+    if (!email.trim()) {
+      Alert.alert('Error', 'Email is required');
+      return false;
     }
     
-    try {
-      dispatch(loginStart());
-      const response = await authApi.login({ email, password });
-      dispatch(loginSuccess({
-        user: response.user,
-        token: response.token
-      }));
-      
-      // Navigate to the home screen
-      navigation.replace('Home');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
-      dispatch(loginFailure(errorMessage));
-      Alert.alert('Login Error', errorMessage);
+    if (!password) {
+      Alert.alert('Error', 'Password is required');
+      return false;
     }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  const handleLogin = async () => {
+    if (!validateInputs()) return;
+    
+    // Dispatch login action
+    dispatch(login({ email, password }));
   };
   
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Cosmo</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
-        
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.buttonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <View style={styles.content}>
+            <Text style={styles.title}>Cosmo</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
+            
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                testID="email-input"
+              />
+              
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                testID="password-input"
+              />
+              
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={isLoading}
+                testID="login-button"
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.buttonText}>Log In</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Register')}
+                testID="register-link"
+              >
+                <Text style={styles.footerLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -93,6 +142,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -130,6 +185,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: '#a4cfed',
   },
   buttonText: {
     color: '#fff',
