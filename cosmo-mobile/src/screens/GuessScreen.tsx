@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -12,13 +12,14 @@ import {
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { 
-  Marker, 
-  MapPressEvent, 
-  PROVIDER_GOOGLE, 
-  Polyline, 
-  Circle 
-} from 'react-native-maps';
+// Temporarily removing MapView to fix the build
+// import MapView, { 
+//   Marker, 
+//   MapPressEvent, 
+//   PROVIDER_GOOGLE, 
+//   Polyline, 
+//   Circle 
+// } from 'react-native-maps';
 import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Carousel from 'react-native-snap-carousel';
