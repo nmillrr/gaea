@@ -1,19 +1,16 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Provider } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { store } from './src/store';
 import { useAuth } from './src/hooks/useAuth';
+import { RootState } from './src/store';
 
-// Component that uses the auth hook to restore auth state
-const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  useAuth();
-  return <>{children}</>;
-};
+// Import screens
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -37,43 +34,87 @@ export type RootStackParamList = {
   PhotoDetail: { photoId: string };
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+// Create stack navigators for authenticated and unauthenticated flows
+const AuthStack = createNativeStackNavigator<RootStackParamList>();
+const MainStack = createNativeStackNavigator<RootStackParamList>();
 
+// Loading screen shown during initialization
+const LoadingScreen = () => (
+  <View style={styles.centeredContainer}>
+    <ActivityIndicator size="large" color="#5E60CE" />
+    <Text style={styles.loadingText}>Loading...</Text>
+  </View>
+);
+
+// Main navigation component that handles conditional rendering based on auth state
+const AppNavigator = () => {
+  const { initializing, isAuthenticated, onboardingComplete } = useAuth();
+  
+  // Show loading screen during initialization
+  if (initializing) {
+    return <LoadingScreen />;
+  }
+  
+  return (
+    <NavigationContainer>
+      {!isAuthenticated ? (
+        // Auth Stack - shown when user is not authenticated
+        <AuthStack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animationTypeForReplace: isAuthenticated ? 'push' : 'pop',
+          }}
+        >
+          <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Screen name="Register" component={RegisterScreen} />
+        </AuthStack.Navigator>
+      ) : !onboardingComplete ? (
+        // Onboarding - shown after authentication but before onboarding is complete
+        <MainStack.Navigator screenOptions={{ headerShown: false }}>
+          <MainStack.Screen name="Onboarding" component={OnboardingScreen} />
+        </MainStack.Navigator>
+      ) : (
+        // Main App - shown after authentication and onboarding
+        <MainStack.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <MainStack.Screen name="Home" component={HomeScreen} />
+          <MainStack.Screen name="Feed" component={FeedScreen} />
+          <MainStack.Screen name="Capture" component={CaptureScreen} />
+          <MainStack.Screen name="Guess" component={GuessScreen} />
+          <MainStack.Screen name="Profile" component={ProfileScreen} />
+          <MainStack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+        </MainStack.Navigator>
+      )}
+      <StatusBar style="auto" />
+    </NavigationContainer>
+  );
+};
+
+// Component that wraps the whole app
 export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <NavigationContainer>
-            <Stack.Navigator 
-              initialRouteName="Login"
-              screenOptions={{
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Register" component={RegisterScreen} />
-              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-              <Stack.Screen name="Home" component={FeedScreen} />
-              <Stack.Screen name="Feed" component={FeedScreen} />
-              <Stack.Screen name="Capture" component={CaptureScreen} />
-              <Stack.Screen name="Guess" component={GuessScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
-            </Stack.Navigator>
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </AuthProvider>
+        <AppNavigator />
       </SafeAreaProvider>
     </Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  centeredContainer: {
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#5E60CE',
   },
 });

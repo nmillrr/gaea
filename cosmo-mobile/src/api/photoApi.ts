@@ -106,6 +106,11 @@ export const photoApi = {
     return response.data;
   },
 
+  getUserPhotos: async (): Promise<PhotoResponse> => {
+    const response = await axiosInstance.get('/users/me/photos');
+    return response.data;
+  },
+
   checkUploadAllowed: async (): Promise<UploadCheckResponse> => {
     const response = await axiosInstance.get('/photos/check-upload');
     return response.data;

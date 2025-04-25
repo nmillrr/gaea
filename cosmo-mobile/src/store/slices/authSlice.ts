@@ -15,6 +15,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  onboardingComplete: boolean;
+  token: string | null;
 }
 
 interface LoginCredentials {
@@ -118,6 +120,8 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  onboardingComplete: false,
+  token: null,
 };
 
 // Slice
@@ -133,6 +137,15 @@ export const authSlice = createSlice({
         state.user = { ...state.user, ...action.payload };
       }
     },
+    setOnboardingComplete: (state, action: PayloadAction<boolean>) => {
+      state.onboardingComplete = action.payload;
+    },
+    setToken: (state, action: PayloadAction<string>) => {
+      state.token = action.payload;
+    },
+    clearToken: (state) => {
+      state.token = null;
+    },
   },
   extraReducers: (builder) => {
     // Login cases
@@ -144,6 +157,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
+      state.token = action.payload.token;
       state.error = null;
     });
     builder.addCase(login.rejected, (state, action) => {
@@ -160,6 +174,8 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.onboardingComplete = false; // Require onboarding after registration
       state.error = null;
     });
     builder.addCase(register.rejected, (state, action) => {
@@ -171,6 +187,8 @@ export const authSlice = createSlice({
     builder.addCase(logout.fulfilled, (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.token = null;
+      state.onboardingComplete = false;
     });
 
     // Update profile cases
@@ -207,6 +225,6 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, updateProfile } = authSlice.actions;
+export const { clearError, updateProfile, setOnboardingComplete, setToken, clearToken } = authSlice.actions;
 
 export default authSlice.reducer;

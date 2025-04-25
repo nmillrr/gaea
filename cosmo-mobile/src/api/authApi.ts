@@ -1,48 +1,114 @@
-import axiosInstance from './axios';
+import axiosInstance, { createFormData } from './axios';
 
-interface LoginData {
+// Types
+export interface LoginCredentials {
   email: string;
   password: string;
 }
 
-interface RegisterData {
+export interface RegisterCredentials {
   email: string;
   password: string;
   username: string;
 }
 
-interface UpdateProfileData {
+export interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    avatarUrl?: string;
+  };
+  token: string;
+  refreshToken?: string;
+}
+
+export interface RefreshTokenResponse {
+  token: string;
+  refreshToken?: string;
+}
+
+export interface UpdateProfileData {
   username?: string;
   avatarUrl?: string;
 }
 
+export interface ProfileResponse {
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    avatarUrl?: string;
+  };
+}
+
+export interface UploadAvatarResponse {
+  avatarUrl: string;
+}
+
+// Auth API
 export const authApi = {
-  login: async (data: LoginData) => {
-    const response = await axiosInstance.post('/auth/login', data);
+  /**
+   * Login user
+   */
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    const response = await axiosInstance.post('/auth/login', credentials);
     return response.data;
   },
-  
-  register: async (data: RegisterData) => {
+
+  /**
+   * Register user
+   */
+  register: async (data: RegisterCredentials): Promise<AuthResponse> => {
     const response = await axiosInstance.post('/auth/register', data);
     return response.data;
   },
-  
-  getUserProfile: async () => {
+
+  /**
+   * Refresh token
+   */
+  refreshToken: async (refreshToken: string): Promise<RefreshTokenResponse> => {
+    const response = await axiosInstance.post('/auth/refresh-token', { refreshToken });
+    return response.data;
+  },
+
+  /**
+   * Get user profile
+   */
+  getUserProfile: async (): Promise<ProfileResponse> => {
     const response = await axiosInstance.get('/users/me');
     return response.data;
   },
 
-  updateProfile: async (data: UpdateProfileData) => {
-    const response = await axiosInstance.post('/users/me', data);
+  /**
+   * Update user profile
+   */
+  updateProfile: async (data: UpdateProfileData): Promise<ProfileResponse> => {
+    const response = await axiosInstance.put('/users/me', data);
     return response.data;
   },
 
-  uploadAvatar: async (formData: FormData) => {
-    const response = await axiosInstance.post('/users/avatar', formData, {
+  /**
+   * Upload user avatar
+   */
+  uploadAvatar: async (formData: FormData): Promise<UploadAvatarResponse> => {
+    const response = await axiosInstance.post('/users/me/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
+  },
+
+  /**
+   * Verify token is valid
+   */
+  verifyToken: async (): Promise<{ valid: boolean; user?: ProfileResponse['user'] }> => {
+    try {
+      const response = await axiosInstance.get('/auth/verify');
+      return { valid: true, user: response.data.user };
+    } catch (error) {
+      return { valid: false };
+    }
   },
 };

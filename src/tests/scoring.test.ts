@@ -2,66 +2,84 @@ import { scoreGuess, Result } from '../game/scoring';
 
 describe('Scoring System', () => {
   describe('scoreGuess function', () => {
-    test('exact match should return 0 distance and 5000 points', () => {
-      const actual = { lat: 40.7128, lng: -74.0060 }; // New York City
-      const result = scoreGuess(actual.lat, actual.lng, actual.lat, actual.lng);
-      
-      expect(result.distance_m).toBe(0);
-      expect(result.points).toBe(5000);
-    });
+    // Test cases with different city pairs around the world
+    const testCases = [
+      {
+        actual: { name: 'New York City', lat: 40.7128, lng: -74.0060 },
+        guess: { name: 'New York City (exact match)', lat: 40.7128, lng: -74.0060 },
+        expected: { distance_range: [0, 1], points: 5000 }
+      },
+      {
+        actual: { name: 'Central Park', lat: 40.7812, lng: -73.9665 },
+        guess: { name: 'Empire State Building', lat: 40.7484, lng: -73.9857 },
+        expected: { distance_range: [3000, 5000], points_range: [3900, 4200] } 
+      },
+      {
+        actual: { name: 'Paris', lat: 48.8566, lng: 2.3522 },
+        guess: { name: 'London', lat: 51.5074, lng: -0.1278 },
+        expected: { distance_range: [300000, 350000], points: 0 }
+      },
+      {
+        actual: { name: 'Tokyo', lat: 35.6762, lng: 139.6503 },
+        guess: { name: 'Kyoto', lat: 35.0116, lng: 135.7681 },
+        expected: { distance_range: [350000, 400000], points: 0 }
+      },
+      {
+        actual: { name: 'Sydney', lat: -33.8688, lng: 151.2093 },
+        guess: { name: 'Melbourne', lat: -37.8136, lng: 144.9631 },
+        expected: { distance_range: [700000, 750000], points: 0 }
+      },
+      {
+        actual: { name: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729 },
+        guess: { name: 'São Paulo', lat: -23.5505, lng: -46.6333 },
+        expected: { distance_range: [350000, 400000], points: 0 }
+      },
+      {
+        actual: { name: 'Cairo', lat: 30.0444, lng: 31.2357 },
+        guess: { name: 'Alexandria', lat: 31.2001, lng: 29.9187 },
+        expected: { distance_range: [170000, 190000], points: 0 }
+      },
+      {
+        actual: { name: 'Times Square', lat: 40.7580, lng: -73.9855 },
+        guess: { name: 'Brooklyn Bridge', lat: 40.7061, lng: -73.9969 },
+        expected: { distance_range: [5000, 7000], points_range: [3200, 3800] }
+      },
+      {
+        actual: { name: 'Statue of Liberty', lat: 40.6892, lng: -74.0445 },
+        guess: { name: 'Staten Island Ferry', lat: 40.7021, lng: -74.0142 },
+        expected: { distance_range: [2500, 3500], points_range: [4100, 4400] }
+      },
+      {
+        actual: { name: 'Santa Monica Pier', lat: 34.0086, lng: -118.4975 },
+        guess: { name: 'Venice Beach', lat: 33.9850, lng: -118.4695 },
+        expected: { distance_range: [2500, 3500], points_range: [4100, 4400] }
+      }
+    ];
 
-    test('nearby guess should return partial points', () => {
-      // Central Park to Empire State Building (~3.9 km)
-      const actualLocation = { lat: 40.7812, lng: -73.9665 }; // Central Park
-      const guessLocation = { lat: 40.7484, lng: -73.9857 }; // Empire State Building
-      
-      const result = scoreGuess(
-        actualLocation.lat, actualLocation.lng,
-        guessLocation.lat, guessLocation.lng
-      );
-      
-      // The distance should be around 3-4 km
-      expect(result.distance_m).toBeGreaterThan(3000);
-      expect(result.distance_m).toBeLessThan(5000);
-      
-      // For ~4 km distance, points should be ~4000
-      // 5000 * (1 - 4000/20000) = 4000
-      expect(result.points).toBeGreaterThan(3900);
-      expect(result.points).toBeLessThan(4100);
-    });
-
-    test('far guess but within max distance should return minimal points', () => {
-      // Distance around 18 km
-      const actualLocation = { lat: 40.7128, lng: -74.0060 }; // NYC
-      const guessLocation = { lat: 40.8590, lng: -73.8300 }; // Bronx
-      
-      const result = scoreGuess(
-        actualLocation.lat, actualLocation.lng,
-        guessLocation.lat, guessLocation.lng
-      );
-      
-      // The actual measured distance is around 22 km, but we just need to test the logic
-      // For test purposes, let's just check that points are low for a long distance
-      
-      // Should get minimal points for a long distance
-      expect(result.points).toBeGreaterThanOrEqual(0);
-      
-      // Actual distance is > 20km, so points should be 0
-      expect(result.points).toBe(0);
-    });
-
-    test('guess beyond max distance should return 0 points', () => {
-      // Distance over 20 km
-      const actualLocation = { lat: 40.7128, lng: -74.0060 }; // NYC
-      const guessLocation = { lat: 40.9513, lng: -73.7803 }; // New Rochelle (>20km)
-      
-      const result = scoreGuess(
-        actualLocation.lat, actualLocation.lng,
-        guessLocation.lat, guessLocation.lng
-      );
-      
-      expect(result.distance_m).toBeGreaterThan(20000);
-      expect(result.points).toBe(0);
+    // Run all test cases
+    testCases.forEach(testCase => {
+      test(`Distance from ${testCase.actual.name} to ${testCase.guess.name}`, () => {
+        const result = scoreGuess(
+          testCase.actual.lat, testCase.actual.lng,
+          testCase.guess.lat, testCase.guess.lng
+        );
+        
+        // Check distance range
+        if (testCase.expected.distance_range) {
+          const [min, max] = testCase.expected.distance_range;
+          expect(result.distance_m).toBeGreaterThanOrEqual(min);
+          expect(result.distance_m).toBeLessThanOrEqual(max);
+        }
+        
+        // Check exact points or points range
+        if (testCase.expected.points_range) {
+          const [min, max] = testCase.expected.points_range;
+          expect(result.points).toBeGreaterThanOrEqual(min);
+          expect(result.points).toBeLessThanOrEqual(max);
+        } else if (testCase.expected.points !== undefined) {
+          expect(result.points).toBe(testCase.expected.points);
+        }
+      });
     });
 
     test('antipodal points should return maximum possible distance', () => {

@@ -1,136 +1,165 @@
-# Cosmo Backend
+# Cosmo - Location-Based Photo Guessing Game
 
-A Node.js backend API for the Cosmo application built with Express and TypeScript.
+Cosmo is a social location-based photo guessing game where users share geotagged photos and friends compete to guess the exact locations.
+
+## Overview
+
+The application consists of two main components:
+1. A Node.js backend API (this repository)
+2. A React Native mobile app in the `cosmo-mobile` directory
+
+## CI/CD Pipeline
+
+Cosmo uses GitHub Actions for continuous integration and deployment. The pipeline includes:
+
+- Linting for both backend and frontend code
+- Automated testing with Jest
+- Docker image building and deployment
+
+For more details, see the [CI/CD Guide](./.github/CI_CD_GUIDE.md).
 
 ## Features
 
-- RESTful API with Express
+- User authentication and profile management
+- Photo uploads with geolocation data
+- Friend system with requests and connection management
+- Location guessing with points based on proximity
+- Activity feed of friends' photos
+- Leaderboards and statistics
+- Push notifications for new photos and guesses
+
+## Technology Stack
+
+### Backend
+- Node.js with Express
 - TypeScript for type safety
-- PostgreSQL database with TypeORM
-- PostGIS extension for geospatial queries
+- PostgreSQL with PostGIS for geospatial queries
+- Redis for caching and rate limiting
+- S3-compatible storage for images
 - JWT authentication
-- Secure file uploads to AWS S3
-- EXIF metadata stripping for privacy
-- CORS enabled
+- Docker containerization
 
-## Database Schema
+### Mobile App
+- React Native with Expo
+- Redux Toolkit for state management
+- React Navigation for routing
+- Maps integration for location guessing
 
-The database schema consists of the following tables:
+## Docker Development Environment
 
-1. **users**
-   - User accounts with authentication
-   - Fields: id, email, password_hash, username, avatar_url, created_at
+We provide a complete Docker-based development environment with all required services.
 
-2. **photos**
-   - Photos with geolocation data
-   - Fields: id, user_id, s3_key, latitude, longitude, created_at
+### Prerequisites
 
-3. **guesses**
-   - User guesses for photo locations
-   - Fields: id, photo_id, user_id, guess_lat, guess_lng, distance_meters, points, created_at
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
-4. **friendships**
-   - Connections between users
-   - Fields: user_id, friend_id, status (pending/accepted), created_at
+### Quick Start
 
-5. **comments**
-   - User comments on photos
-   - Fields: id, photo_id, user_id, text, created_at
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/cosmo.git
+   cd cosmo
+   ```
+
+2. Run the setup script to bootstrap the development environment:
+   ```
+   ./setup-dev.sh
+   ```
+
+This will:
+- Create a `.env` file from `.env.example`
+- Install dependencies
+- Build and start the Docker containers
+- Display URLs for all services
+
+### Services
+
+The development environment includes:
+
+- **Backend API**: [http://localhost:4000](http://localhost:4000)
+- **PostgreSQL with PostGIS**: localhost:5432
+- **Redis**: localhost:6379
+- **MinIO (S3-compatible storage)**:
+  - API: [http://localhost:9000](http://localhost:9000)
+  - Web Console: [http://localhost:9001](http://localhost:9001) (login with minioadmin/minioadmin)
+
+### Manual Setup
+
+If you prefer to set up manually:
+
+1. Copy the environment variables file:
+   ```
+   cp .env.example .env
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Start the Docker containers:
+   ```
+   docker-compose up -d
+   ```
+
+4. Start the development server:
+   ```
+   npm run dev
+   ```
 
 ## API Endpoints
 
 ### Authentication
 - `POST /auth/register` - Register a new user
 - `POST /auth/login` - Login and receive JWT token
+- `POST /auth/refresh-token` - Refresh an expired JWT token
 
 ### Photos
-- `POST /photos` - Upload a new photo (authenticated)
-- `GET /photos` - Get all user photos (authenticated)
-- `GET /photos/feed` - Get photos from friends (authenticated)
-- `GET /photos/:id` - Get a specific photo (authenticated)
-- `GET /photos/:photoId/leaderboard` - Get leaderboard for a photo (authenticated)
+- `POST /photos` - Upload a new photo
+- `GET /photos/feed` - Get photos from friends
+- `GET /photos/:id` - Get a specific photo
+- `GET /photos/:photoId/leaderboard` - Get leaderboard for a photo
 
 ### Guesses
-- `POST /photos/:photoId/guess` - Submit a guess for a photo (authenticated)
-- `GET /photos/:photoId/guess` - Get the user's guess for a photo (authenticated)
-- `GET /photos/:photoId/guesses` - Get all guesses for a photo (authenticated)
+- `POST /photos/:photoId/guess` - Submit a guess for a photo
+- `GET /photos/:photoId/guess` - Get the user's guess for a photo
 
 ### Friends
-- `POST /friends/request` - Send a friendship request (authenticated)
-- `POST /friends/accept` - Accept a friendship request (authenticated)
-- `GET /friends` - List all accepted friends (authenticated)
+- `POST /friends/request/:userId` - Send a friendship request
+- `POST /friends/request/:userId/respond` - Accept/reject a friendship request
+- `GET /friends` - List all accepted friends
+- `GET /friends/requests` - List all pending friend requests
 
-### Notifications
-- `POST /notifications/test` - Send a test notification 
-- `POST /notifications/register` - Register a device token for push notifications (authenticated)
+### User Profile
+- `GET /users/me` - Get current user info
+- `PUT /users/me` - Update user profile
+- `POST /users/me/avatar` - Upload user avatar
 
-### Protected Routes
-- `GET /api/me` - Get current user info (authenticated)
+## Mobile App
 
-## Getting Started
+To run the mobile app:
 
-### Prerequisites
+```
+cd cosmo-mobile
+npm install
+npm start
+```
 
-- Node.js (v14+ recommended)
-- PostgreSQL with PostGIS extension
-- AWS account (for photo storage)
+Then scan the QR code with the Expo Go app on your device.
 
-### Installation
+## Database Schema
 
-1. Clone the repository
-   ```
-   git clone https://github.com/yourusername/cosmo.git
-   cd cosmo
-   ```
+The database schema consists of the following tables:
 
-2. Install dependencies
-   ```
-   npm install
-   ```
-
-3. Set up environment variables
-   ```
-   cp .env.example .env
-   ```
-   Edit the `.env` file with your database credentials and AWS S3 configuration.
-
-4. Build the application
-   ```
-   npm run build
-   ```
-
-5. Start the server
-   ```
-   npm start
-   ```
-   For development with automatic reloading:
-   ```
-   npm run dev
-   ```
-
-## Photo Upload Details
-
-The photo upload endpoint:
-- Accepts images via multipart/form-data
-- Limits upload size to 10MB
-- Only allows image file types (JPEG, PNG, GIF, WebP)
-- Strips EXIF metadata for privacy
-- Stores files in date-based folders (YYYY/MM/DD)
-- Requires latitude/longitude coordinates
-- Returns the photo's S3 URL and metadata
-
-## Security Features
-
-- Password hashing with bcrypt
-- JWT-based authentication with 7-day expiration
-- HTTPS enforcement via middleware
-- Helmet for secure HTTP headers
-- Rate limiting on sensitive endpoints
-- EXIF metadata stripping for privacy
-- File size and type validation
-- Content Security Policy implementation
-- Protection against XSS, clickjacking, and other attacks
-- Input sanitization
+1. **users** - User accounts with authentication
+2. **photos** - Photos with geolocation data
+3. **guesses** - User guesses for photo locations
+4. **friendships** - Connections between users
+5. **comments** - User comments on photos
+6. **notifications** - User notifications
 
 ## Testing
 
