@@ -76,12 +76,11 @@ const AppNavigator = () => {
       ) : (
         // Main App - shown after authentication and onboarding
         <MainStack.Navigator
-          initialRouteName="Home"
+          initialRouteName="Feed" // Changed from Home to Feed
           screenOptions={{
             headerShown: false,
           }}
         >
-          <MainStack.Screen name="Home" component={HomeScreen} />
           <MainStack.Screen name="Feed" component={FeedScreen} />
           <MainStack.Screen name="Capture" component={CaptureScreen} />
           <MainStack.Screen name="Guess" component={GuessScreen} />

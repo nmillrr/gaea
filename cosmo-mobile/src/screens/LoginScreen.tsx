@@ -40,12 +40,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [isAuthenticated, navigation]);
   
-  // Display error message if auth fails
+  // Display error message if auth fails - but only when error is triggered by a login attempt
+  // not when the component initially mounts
+  const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
   useEffect(() => {
-    if (error) {
+    if (error && hasAttemptedLogin) {
       Alert.alert('Login Error', error);
     }
-  }, [error]);
+  }, [error, hasAttemptedLogin]);
   
   const validateInputs = (): boolean => {
     // Basic validation
@@ -71,6 +73,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   
   const handleLogin = async () => {
     if (!validateInputs()) return;
+    
+    // Set that we've attempted login to show any error messages
+    setHasAttemptedLogin(true);
     
     // Dispatch login action
     dispatch(login({ email, password }));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Component } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -12,7 +12,9 @@ import {
   Platform,
   ScrollView
 } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
+
+// Import all external dependencies first
+import { Camera as ExpoCamera, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +22,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
 
+// Import project dependencies
 import { RootStackParamList } from '../../App';
 import { RootState, AppDispatch } from '../store';
 import { 
@@ -30,6 +33,47 @@ import {
   uploadPhoto, 
   checkUploadAllowed
 } from '../store/slices/captureSlice';
+
+// Fallback values in case the imports fail
+const CAMERA_TYPES = {
+  back: 'back',
+  front: 'front'
+};
+
+// Simple error boundary component for React Native
+class ErrorBoundary extends Component {
+  state = { hasError: false, error: null };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error("Camera error:", error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback(this.state.error);
+    }
+    return this.props.children;
+  }
+}
+
+// Create a safe Camera component
+const Camera = (props) => {
+  // Make sure ExpoCamera is a valid component
+  if (!ExpoCamera || typeof ExpoCamera !== 'function') {
+    console.error('Camera component is not a valid React component');
+    return (
+      <View style={[props.style, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: 'white' }}>Camera not available</Text>
+      </View>
+    );
+  }
+  
+  return <ExpoCamera {...props} />;
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Capture'>;
 
@@ -48,7 +92,8 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
   } = useSelector((state: RootState) => state.capture);
   
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [type, setType] = useState(CameraType.back);
+  // Use fallback values if CameraType is undefined
+  const [type, setType] = useState(CameraType?.back || CAMERA_TYPES.back);
   const [stage, setStage] = useState<'camera' | 'preview' | 'caption'>('camera');
   const cameraRef = useRef<Camera | null>(null);
 
@@ -90,7 +135,23 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
   // Navigate to Feed if upload is successful
   useEffect(() => {
     if (uploadSuccess) {
-      navigation.navigate('Feed');
+      try {
+        console.log('Upload successful, attempting to navigate back');
+        if (navigation.canGoBack()) {
+          console.log('Using navigation.goBack()');
+          navigation.goBack();
+        } else {
+          console.log('Using navigation.navigate("Feed")');
+          navigation.navigate('Feed');
+        }
+      } catch (error) {
+        console.error('Navigation error after successful upload:', error);
+        // Final fallback - try to reset navigation state completely
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Feed' }],
+        });
+      }
     }
   }, [uploadSuccess, navigation]);
 
@@ -164,14 +225,28 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    dispatch(uploadPhoto({
-      photoUri,
-      location: {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude
-      },
-      caption: caption.trim() || undefined
-    }));
+    try {
+      console.log('Uploading photo with data:', {
+        photoUri: photoUri.substring(0, 30) + '...',
+        location: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        },
+        caption: caption.trim() || undefined
+      });
+      
+      dispatch(uploadPhoto({
+        photoUri,
+        location: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        },
+        caption: caption.trim() || undefined
+      }));
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      Alert.alert('Upload Error', 'An unexpected error occurred while uploading the photo');
+    }
   };
 
   const retake = () => {
@@ -337,29 +412,51 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   // Render camera screen (default)
+  console.log('CaptureScreen rendering with navigation:', 
+    navigation ? 'Navigation object exists' : 'Navigation is undefined', 
+    'canGoBack:', navigation?.canGoBack?.() ? 'true' : 'false'
+  );
+  
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.cameraContainer}>
-        <Camera 
-          style={styles.camera} 
-          type={type}
-          ref={cameraRef}
+        {/* Wrap Camera component in error boundary */}
+        <ErrorBoundary
+          fallback={(error) => (
+            <View style={[styles.camera, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: 'white' }}>Camera initialization error</Text>
+              <TouchableOpacity 
+                style={{ padding: 10, backgroundColor: '#3498db', borderRadius: 5, marginTop: 20 }}
+                onPress={() => navigation.navigate('Feed')}
+              >
+                <Text style={{ color: 'white' }}>Go back</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         >
-          <View style={styles.cameraControls}>
-            <TouchableOpacity
-              style={styles.flipButton}
-              onPress={() => {
-                setType(
-                  type === CameraType.back
-                    ? CameraType.front
-                    : CameraType.back
-                );
-              }}
-            >
-              <Text style={styles.flipText}>Flip</Text>
-            </TouchableOpacity>
-          </View>
-        </Camera>
+          <Camera 
+            style={styles.camera} 
+            type={type}
+            ref={cameraRef}
+          >
+            <View style={styles.cameraControls}>
+              <TouchableOpacity
+                style={styles.flipButton}
+                onPress={() => {
+                  // Use fallback values if CameraType is undefined
+                  const backType = CameraType?.back || CAMERA_TYPES.back;
+                  const frontType = CameraType?.front || CAMERA_TYPES.front;
+                  
+                  setType(
+                    type === backType ? frontType : backType
+                  );
+                }}
+              >
+                <Text style={styles.flipText}>Flip</Text>
+              </TouchableOpacity>
+            </View>
+          </Camera>
+        </ErrorBoundary>
         
         <View style={styles.controls}>
           <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
@@ -375,7 +472,25 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
           
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              try {
+                console.log('Cancel button pressed, attempting to navigate');
+                if (navigation.canGoBack()) {
+                  console.log('Using navigation.goBack()');
+                  navigation.goBack();
+                } else {
+                  console.log('Using navigation.navigate("Feed")');
+                  navigation.navigate('Feed');
+                }
+              } catch (error) {
+                console.error('Navigation error from cancel button:', error);
+                // Final fallback - try to reset navigation state completely
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Feed' }],
+                });
+              }
+            }}
           >
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
