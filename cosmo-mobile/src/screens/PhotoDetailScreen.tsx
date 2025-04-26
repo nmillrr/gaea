@@ -11,7 +11,8 @@ import {
   Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+// Temporarily commenting out the maps import until it's properly configured
+// import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../App';
@@ -52,7 +53,8 @@ const PhotoDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [leaderboard, setLeaderboard] = useState<Guess[]>([]);
   const [loading, setLoading] = useState(true);
   const [showActualLocation, setShowActualLocation] = useState(false);
-  const mapRef = useRef<MapView | null>(null);
+  // Commented out until maps are properly configured
+  // const mapRef = useRef<MapView | null>(null);
   
   useEffect(() => {
     fetchPhotoDetails();
@@ -204,6 +206,11 @@ const PhotoDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         
         {userGuess && (
           <View style={styles.mapContainer}>
+            <View style={styles.disabledMapView}>
+              <Text style={styles.disabledMapText}>Map view temporarily disabled</Text>
+              <Text style={styles.disabledMapText}>Maps functionality will be available in the next update</Text>
+            </View>
+            {/* Map functionality temporarily disabled
             <MapView
               ref={mapRef}
               style={styles.map}
@@ -226,6 +233,7 @@ const PhotoDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 />
               )}
             </MapView>
+            */}
           </View>
         )}
         
@@ -386,6 +394,17 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  disabledMapView: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledMapText: {
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 5,
   },
   leaderboardContainer: {
     padding: 15,

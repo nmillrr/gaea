@@ -16,6 +16,9 @@
       "**/*"
     ],
     "ios": {
+      "config": {
+        "googleMapsApiKey": "AIzaSyAc80wlVDRnuhqSICbtKvZOax3tBITOjW0"
+      },
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Cosmo needs access to your camera to take photos for location guessing",
@@ -27,6 +30,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAc80wlVDRnuhqSICbtKvZOax3tBITOjW0"
+        }
       },
       "permissions": [
         "CAMERA",
@@ -40,24 +48,30 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Cosmo needs access to your camera to take photos for location guessing"
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Cosmo needs access to your location to record photo coordinates and make guesses"
-        }
-      ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Cosmo needs access to your photo library to allow you to upload photos"
-        }
-      ]
+        [
+          "expo-location",
+          {
+            "locationAlwaysAndWhenInUsePermission": "Allow Cosmo to use your location."
+          }
+        ],
+        [
+          "react-native-maps",
+          {
+            "googleMapsApiKey": "AIzaSyAc80wlVDRnuhqSICbtKvZOax3tBITOjW0"
+          }
+        ],
+        [
+          "expo-camera",
+          {
+            "cameraPermission": "Cosmo needs access to your camera to take photos for location guessing"
+          }
+        ],
+        [
+          "expo-image-picker",
+          {
+            "photosPermission": "Cosmo needs access to your photo library to allow you to upload photos"
+          }
+        ]
     ]
   }
 }

@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import MapView, { Marker, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
+// Temporarily commenting out the maps import until it's properly configured
+// import MapView, { Marker, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
 import { format } from 'date-fns';
 
 import { RootState } from '../store';
@@ -57,7 +58,7 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   
-  const mapRef = useRef<MapView | null>(null);
+  // const mapRef = useRef<MapView | null>(null);
   const isCurrentUser = !userId || userId === currentUser?.id;
   
   useEffect(() => {
@@ -158,7 +159,9 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const handleToggleView = () => {
-    setViewMode(viewMode === 'grid' ? 'map' : 'grid');
+    // For now, keep in grid view until maps are properly configured
+    Alert.alert('Maps Temporarily Disabled', 'Map view is currently unavailable until the maps integration is properly configured.');
+    // setViewMode(viewMode === 'grid' ? 'map' : 'grid');
   };
 
   const handleMarkerPress = (photo: Photo) => {
@@ -166,6 +169,8 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
     setModalVisible(true);
   };
 
+  // Commented out until maps are properly configured
+  /*
   const handleMapReady = () => {
     if (photosWithLocation.length > 0 && mapRef.current) {
       const coordinates = photosWithLocation.map(photo => ({
@@ -179,6 +184,7 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
       });
     }
   };
+  */
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
@@ -329,7 +335,7 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-      ) : viewMode === 'grid' ? (
+      ) : (
         <View style={styles.photoViewContainer}>
           <FlatList
             data={userPhotos}
@@ -339,6 +345,8 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
             contentContainerStyle={styles.photoGrid}
           />
         </View>
+      )
+      /* Maps functionality temporarily disabled
       ) : (
         <View style={styles.photoViewContainer}>
           <View style={styles.mapContainer}>
@@ -387,7 +395,8 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
             horizontal={false}
           />
         </View>
-      )}
+      )
+      */}
 
       {/* Modal for selected photo from map */}
       <Modal

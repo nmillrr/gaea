@@ -21,12 +21,14 @@ import { RootState } from '../store';
 import { RootStackParamList } from '../../App';
 import { updateUserProfile, uploadAvatar } from '../store/slices/authSlice';
 import { AppDispatch } from '../store';
+import { useAuth } from '../hooks/useAuth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { completeOnboarding } = useAuth();
   
   const [username, setUsername] = useState<string>(user?.username || '');
   const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl || null);
@@ -49,20 +51,38 @@ const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setAvatar(result.assets[0].uri);
-      setImageFile({
-        uri: result.assets[0].uri,
-        type: 'image/jpeg',
-        name: 'avatar.jpg',
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
       });
+
+      if (!result.canceled) {
+        console.log('Selected image:', result.assets[0]);
+        
+        // Get file extension from URI
+        const uri = result.assets[0].uri;
+        const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+        
+        setAvatar(uri);
+        setImageFile({
+          uri: uri,
+          type: mimeType,
+          name: `avatar.${fileExtension}`,
+        });
+        
+        console.log('Image file prepared:', {
+          uri: uri,
+          type: mimeType,
+          name: `avatar.${fileExtension}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick an image. Please try again.');
     }
   };
 
@@ -91,26 +111,42 @@ const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     try {
-      // First upload avatar if exists
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append('avatar', imageFile);
-        
-        const uploadResult = await dispatch(uploadAvatar(formData)).unwrap();
-        
-        // Update profile with username and avatar URL
-        await dispatch(updateUserProfile({ 
-          username,
-          avatarUrl: uploadResult.avatarUrl
-        })).unwrap();
-      } else {
-        // Just update the username if no avatar selected
-        await dispatch(updateUserProfile({ username })).unwrap();
+      try {
+        // First upload avatar if exists
+        if (imageFile) {
+          const formData = new FormData();
+          // Make sure we're using the correct field name expected by the backend
+          formData.append('avatar', imageFile);
+          
+          console.log('About to upload avatar');
+          const uploadResult = await dispatch(uploadAvatar(formData)).unwrap();
+          console.log('Avatar upload successful:', uploadResult);
+          
+          // Update profile with username and avatar URL
+          await dispatch(updateUserProfile({ 
+            username,
+            avatarUrl: uploadResult.avatarUrl
+          })).unwrap();
+        } else {
+          // Just update the username if no avatar selected
+          await dispatch(updateUserProfile({ username })).unwrap();
+        }
+      } catch (error) {
+        console.error('Profile update error:', error);
+        throw error; // Re-throw to trigger the outer catch block
       }
       
-      // Navigate to home screen upon success
-      navigation.replace('Home');
+      console.log('Profile updated successfully, completing onboarding');
+      
+      // Update the Redux state to mark onboarding as complete
+      completeOnboarding();
+      
+      console.log('Onboarding marked as complete, navigating to Feed screen');
+      
+      // Navigate to Feed screen instead of Home
+      navigation.replace('Feed');
     } catch (err) {
+      console.error('Final submission error:', err);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     }
   };

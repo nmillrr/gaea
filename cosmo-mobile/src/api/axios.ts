@@ -1,13 +1,16 @@
 import axios from 'axios';
 import { getToken } from '../utils/secureStorage';
 import { Platform } from 'react-native';
-import { store } from '../store';
-import { logout } from '../store/slices/authSlice';
 
 // Create an Axios instance with custom configuration
-const API_URL = Platform.OS === 'ios' 
-  ? 'http://localhost:4000'  // iOS simulator can use localhost
-  : 'http://10.0.2.2:4000';   // Android emulator needs special IP
+// For iOS physical device, you need to use your computer's local network IP
+// Get this IP by running 'ipconfig getifaddr en0' on Mac terminal
+// or check your network settings
+const API_URL = Platform.select({
+  ios: 'http://192.168.1.26:4000',  // Your computer's IP address
+  android: 'http://10.0.2.2:4000',  // Android emulator special IP
+  default: 'http://localhost:4000'  // Fallback for web
+});
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -72,8 +75,8 @@ axiosInstance.interceptors.response.use(
       switch (error.response.status) {
         case 401:
           // Handle unauthorized access (e.g., token expired)
-          // Dispatch logout action to clear auth state
-          store.dispatch(logout());
+          // We'll just log it for now to avoid circular dependencies
+          console.warn('Authentication token expired or invalid');
           break;
         case 403:
           // Handle forbidden access

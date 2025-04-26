@@ -87,10 +87,10 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
     };
   }, [dispatch]);
 
-  // Navigate to Home if upload is successful
+  // Navigate to Feed if upload is successful
   useEffect(() => {
     if (uploadSuccess) {
-      navigation.navigate('Home');
+      navigation.navigate('Feed');
     }
   }, [uploadSuccess, navigation]);
 
@@ -205,7 +205,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
           style={[styles.button, { marginTop: 30 }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.buttonText}>Back to Home</Text>
+          <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );

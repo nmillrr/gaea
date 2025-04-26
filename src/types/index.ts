@@ -19,3 +19,8 @@ export interface LoginRequestBody {
   email: string;
   password: string;
 }
+
+export interface UpdateUserProfileBody {
+  username?: string;
+  avatarUrl?: string;
+}

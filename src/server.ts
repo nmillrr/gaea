@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { initializeDatabase } from './db/init';
 import { securityMiddleware } from './middleware/security';
 import { apiRateLimiter, authRateLimiter } from './middleware/rateLimit';
@@ -24,6 +25,9 @@ app.use(securityMiddleware);
 // Basic middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Global rate limiter
 app.use(apiRateLimiter);
