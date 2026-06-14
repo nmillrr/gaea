@@ -1,6 +1,6 @@
-# Cosmo - Location-Based Photo Guessing Game
+# Gaea - Location-Based Photo Guessing Game
 
-Cosmo is a social location-based photo guessing game where users share geotagged photos and friends compete to guess the exact locations.
+Gaea is a social location-based photo guessing game where users share geotagged photos and friends compete to guess the exact locations.
 
 ## Overview
 
@@ -10,7 +10,7 @@ The application consists of two main components:
 
 ## CI/CD Pipeline
 
-Cosmo uses GitHub Actions for continuous integration and deployment. The pipeline includes:
+Gaea uses GitHub Actions for continuous integration and deployment. The pipeline includes:
 
 - Linting for both backend and frontend code
 - Automated testing with Jest
@@ -60,8 +60,8 @@ We provide a complete Docker-based development environment with all required ser
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/cosmo.git
-   cd cosmo
+   git clone https://github.com/yourusername/gaea.git
+   cd gaea
    ```
 
 2. Run the setup script to bootstrap the development environment:
