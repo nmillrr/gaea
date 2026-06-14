@@ -6,7 +6,10 @@ import { photoApi } from '../../api/photoApi';
 interface CaptureState {
   photoUri: string | null;
   location: Location.LocationObject | null;
+  /** Human-readable address from reverse geocoding, shown on the pre-upload screen. */
+  address: string | null;
   caption: string;
+  hint: string;
   canUpload: boolean;
   nextUploadTime: string | null;
   isUploading: boolean;
@@ -36,16 +39,18 @@ export const uploadPhoto = createAsyncThunk(
     {
       photoUri,
       location,
-      caption
+      caption,
+      hint
     }: {
       photoUri: string;
       location: { latitude: number; longitude: number };
       caption?: string;
+      hint?: string;
     },
     { rejectWithValue }
   ) => {
     try {
-      const response = await photoApi.uploadPhoto(photoUri, location, caption);
+      const response = await photoApi.uploadPhoto(photoUri, location, caption, hint);
       return response;
     } catch (error: any) {
       return rejectWithValue(
@@ -59,7 +64,9 @@ export const uploadPhoto = createAsyncThunk(
 const initialState: CaptureState = {
   photoUri: null,
   location: null,
+  address: null,
   caption: '',
+  hint: '',
   canUpload: true,
   nextUploadTime: null,
   isUploading: false,
@@ -82,10 +89,18 @@ export const captureSlice = createSlice({
     setCaption: (state, action) => {
       state.caption = action.payload;
     },
+    setHint: (state, action) => {
+      state.hint = action.payload;
+    },
+    setAddress: (state, action) => {
+      state.address = action.payload;
+    },
     clearCapture: (state) => {
       state.photoUri = null;
       state.location = null;
+      state.address = null;
       state.caption = '';
+      state.hint = '';
       state.uploadSuccess = false;
       state.error = null;
     },
@@ -128,6 +143,6 @@ export const captureSlice = createSlice({
   },
 });
 
-export const { setPhotoUri, setLocation, setCaption, clearCapture, clearError } = captureSlice.actions;
+export const { setPhotoUri, setLocation, setCaption, setHint, setAddress, clearCapture, clearError } = captureSlice.actions;
 
 export default captureSlice.reducer;

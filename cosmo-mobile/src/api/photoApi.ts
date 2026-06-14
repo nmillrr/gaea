@@ -11,6 +11,7 @@ export interface Photo {
   };
   created_at: string;
   caption?: string;
+  hint?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -71,14 +72,16 @@ export const photoApi = {
   },
 
   uploadPhoto: async (
-    photoUri: string, 
+    photoUri: string,
     location: { latitude: number; longitude: number },
-    caption?: string
+    caption?: string,
+    hint?: string
   ): Promise<UploadPhotoResponse> => {
     console.log('photoApi.uploadPhoto called with:', {
       photoUri: photoUri.substring(0, 30) + '...',
       location,
-      caption
+      caption,
+      hint
     });
     
     try {
@@ -100,9 +103,12 @@ export const photoApi = {
       formData.append('latitude', String(location.latitude));
       formData.append('longitude', String(location.longitude));
       
-      // Append caption if provided
+      // Append caption / hint if provided
       if (caption) {
         formData.append('caption', caption);
+      }
+      if (hint) {
+        formData.append('hint', hint);
       }
 
       console.log('Sending photo upload request to server...');

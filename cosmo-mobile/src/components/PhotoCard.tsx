@@ -93,7 +93,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo }) => {
         {mode === 'photo' ? (
           <Image source={{ uri: photo.s3_url }} style={styles.photo} resizeMode="cover" />
         ) : (
-          <MapGuess onGuess={handleGuess} submitting={submitting} />
+          <MapGuess onGuess={handleGuess} submitting={submitting} hint={photo.hint} />
         )}
 
         {/* Toggle between photo and map (hidden once a result is showing) */}

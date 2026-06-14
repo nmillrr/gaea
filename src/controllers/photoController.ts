@@ -59,9 +59,11 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
     photo.s3_key = s3Key;
     photo.latitude = latitude;
     photo.longitude = longitude;
-    // Optional caption; trim and cap length to match the column.
+    // Optional caption / hint; trim and cap length to match the columns.
     const caption = typeof req.body.caption === 'string' ? req.body.caption.trim() : '';
     photo.caption = caption ? caption.slice(0, 200) : null;
+    const hint = typeof req.body.hint === 'string' ? req.body.hint.trim() : '';
+    photo.hint = hint ? hint.slice(0, 200) : null;
 
     // Save to database
     const savedPhoto = await photoRepository.save(photo);
@@ -74,6 +76,7 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
       id: savedPhoto.id,
       s3_url,
       caption: savedPhoto.caption,
+      hint: savedPhoto.hint,
       latitude: savedPhoto.latitude,
       longitude: savedPhoto.longitude,
       created_at: savedPhoto.created_at
@@ -115,6 +118,7 @@ export const getUserPhotos = async (req: Request, res: Response): Promise<void> 
         user_id: photo.user_id,
         s3_url: getPublicUrl(photo.s3_key),
         caption: photo.caption,
+        hint: photo.hint,
         latitude: photo.latitude,
         longitude: photo.longitude,
         created_at: photo.created_at
@@ -135,6 +139,7 @@ export const getUserPhotos = async (req: Request, res: Response): Promise<void> 
       id: photo.id,
       s3_url: getPublicUrl(photo.s3_key),
       caption: photo.caption,
+      hint: photo.hint,
       latitude: photo.latitude,
       longitude: photo.longitude,
       created_at: photo.created_at
@@ -181,6 +186,7 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       id: photo.id,
       s3_url: getPublicUrl(photo.s3_key),
       caption: photo.caption,
+      hint: photo.hint,
       latitude: photo.latitude,
       longitude: photo.longitude,
       created_at: photo.created_at,
@@ -248,6 +254,7 @@ export const getPhotoFeed = async (req: Request, res: Response): Promise<void> =
         'photo.id as id',
         'photo.s3_key as s3_key',
         'photo.caption as caption',
+        'photo.hint as hint',
         'photo.created_at as created_at',
         'user.id as user_id',
         'user.username as username',
@@ -264,6 +271,7 @@ export const getPhotoFeed = async (req: Request, res: Response): Promise<void> =
       id: photo.id,
       s3_url: getPublicUrl(photo.s3_key),
       caption: photo.caption,
+      hint: photo.hint,
       user: {
         id: photo.user_id,
         username: photo.username,

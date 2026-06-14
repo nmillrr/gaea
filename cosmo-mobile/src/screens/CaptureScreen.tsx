@@ -1,698 +1,494 @@
-import React, { useState, useEffect, useRef, Component } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Image, 
-  ActivityIndicator, 
-  Alert, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
 } from 'react-native';
-
-// Import all external dependencies first
-import { Camera as ExpoCamera, CameraType } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
-// Import project dependencies
 import { RootStackParamList } from '../../App';
 import { RootState, AppDispatch } from '../store';
-import { 
-  setPhotoUri, 
-  setLocation, 
-  setCaption, 
-  clearCapture, 
-  uploadPhoto, 
-  checkUploadAllowed
+import {
+  setPhotoUri,
+  setLocation,
+  setAddress,
+  setCaption,
+  setHint,
+  clearCapture,
+  uploadPhoto,
+  checkUploadAllowed,
 } from '../store/slices/captureSlice';
-
-// Fallback values in case the imports fail
-const CAMERA_TYPES = {
-  back: 'back',
-  front: 'front'
-};
-
-// Simple error boundary component for React Native
-class ErrorBoundary extends Component {
-  state = { hasError: false, error: null };
-  
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  
-  componentDidCatch(error, errorInfo) {
-    console.error("Camera error:", error, errorInfo);
-  }
-  
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback(this.state.error);
-    }
-    return this.props.children;
-  }
-}
-
-// Create a safe Camera component
-const Camera = (props) => {
-  // Make sure ExpoCamera is a valid component
-  if (!ExpoCamera || typeof ExpoCamera !== 'function') {
-    console.error('Camera component is not a valid React component');
-    return (
-      <View style={[props.style, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: 'white' }}>Camera not available</Text>
-      </View>
-    );
-  }
-  
-  return <ExpoCamera {...props} />;
-};
+import { colors, radius, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Capture'>;
 
+/**
+ * Capture is camera-only by design — photos must be taken live in-app so a
+ * location can be recorded at the shutter and can't be spoofed from the gallery.
+ *
+ * Stages: camera (live_camera) → processing (photo_processing, while GPS +
+ * reverse-geocode resolve) → compose (pre_upload, caption/hint + upload).
+ */
+type Stage = 'camera' | 'processing' | 'compose';
+
 const CaptureScreen: React.FC<Props> = ({ navigation }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { 
-    photoUri, 
-    location, 
-    caption, 
-    canUpload, 
-    nextUploadTime, 
-    isUploading, 
-    isCheckingUpload, 
-    uploadSuccess, 
-    error 
+  const {
+    photoUri,
+    location,
+    address,
+    caption,
+    hint,
+    canUpload,
+    nextUploadTime,
+    isUploading,
+    isCheckingUpload,
+    uploadSuccess,
+    error,
   } = useSelector((state: RootState) => state.capture);
-  
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  // Use fallback values if CameraType is undefined
-  const [type, setType] = useState(CameraType?.back || CAMERA_TYPES.back);
-  const [stage, setStage] = useState<'camera' | 'preview' | 'caption'>('camera');
-  const cameraRef = useRef<Camera | null>(null);
 
-  // Check if user can upload when component mounts
+  const [permission, requestPermission] = useCameraPermissions();
+  const [locationGranted, setLocationGranted] = useState<boolean | null>(null);
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [stage, setStage] = useState<Stage>('camera');
+  const cameraRef = useRef<CameraView | null>(null);
+
+  // Check the once-per-day upload limit and ask for permissions up front.
   useEffect(() => {
     dispatch(checkUploadAllowed());
-  }, [dispatch]);
-
-  // Request permissions and set up camera
-  useEffect(() => {
     (async () => {
-      // Request camera permissions
-      const cameraStatus = await Camera.requestCameraPermissionsAsync();
-      
-      // Request media library permissions
-      const galleryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      // Request location permissions
-      const locationStatus = await Location.requestForegroundPermissionsAsync();
-      
-      setHasPermission(
-        cameraStatus.status === 'granted' && 
-        galleryStatus.status === 'granted' &&
-        locationStatus.status === 'granted'
-      );
-      
-      // Get location
-      if (locationStatus.status === 'granted') {
-        getCurrentLocation();
+      if (!permission?.granted) {
+        await requestPermission();
       }
+      const loc = await Location.requestForegroundPermissionsAsync();
+      setLocationGranted(loc.status === 'granted');
     })();
-
-    // Clean up on unmount
     return () => {
       dispatch(clearCapture());
     };
   }, [dispatch]);
 
-  // Navigate to Feed if upload is successful
+  // Leave the screen once the upload succeeds.
   useEffect(() => {
     if (uploadSuccess) {
-      try {
-        console.log('Upload successful, attempting to navigate back');
-        if (navigation.canGoBack()) {
-          console.log('Using navigation.goBack()');
-          navigation.goBack();
-        } else {
-          console.log('Using navigation.navigate("Feed")');
-          navigation.navigate('Feed');
-        }
-      } catch (error) {
-        console.error('Navigation error after successful upload:', error);
-        // Final fallback - try to reset navigation state completely
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Feed' }],
-        });
-      }
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.navigate('Feed');
     }
   }, [uploadSuccess, navigation]);
 
-  // Display error message if upload fails
   useEffect(() => {
-    if (error) {
-      Alert.alert('Error', error);
-    }
+    if (error) Alert.alert('Error', error);
   }, [error]);
 
-  const getCurrentLocation = async () => {
+  /** Capture the photo, then collect + reverse-geocode the location. */
+  const takePicture = async () => {
+    if (!cameraRef.current) return;
     try {
-      const currentLocation = await Location.getCurrentPositionAsync({
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      if (!photo?.uri) return;
+      dispatch(setPhotoUri(photo.uri));
+      setStage('processing');
+      await collectLocation();
+      setStage('compose');
+    } catch (err) {
+      console.error('Error taking picture:', err);
+      Alert.alert('Error', 'Failed to take picture');
+      setStage('camera');
+    }
+  };
+
+  const collectLocation = async () => {
+    try {
+      const current = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
-      dispatch(setLocation(currentLocation));
-    } catch (error) {
-      console.error('Error getting location:', error);
+      dispatch(setLocation(current));
+      try {
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: current.coords.latitude,
+          longitude: current.coords.longitude,
+        });
+        if (place) {
+          const line1 = [place.name || place.street, place.city].filter(Boolean).join(', ');
+          const line2 = [place.region, place.postalCode, place.country]
+            .filter(Boolean)
+            .join(', ');
+          dispatch(setAddress([line1, line2].filter(Boolean).join('\n')));
+        }
+      } catch {
+        // Reverse geocoding is best-effort; coordinates are what matter.
+      }
+    } catch (err) {
+      console.error('Error getting location:', err);
       Alert.alert(
         'Location Error',
-        'Unable to get your current location. Please ensure location services are enabled.'
+        'Unable to get your location. Make sure location services are enabled.',
       );
     }
   };
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          skipProcessing: false,
-        });
-        dispatch(setPhotoUri(photo.uri));
-        setStage('preview');
-      } catch (error) {
-        console.error('Error taking picture:', error);
-        Alert.alert('Error', 'Failed to take picture');
-      }
-    }
-  };
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      dispatch(setPhotoUri(result.assets[0].uri));
-      setStage('preview');
-    }
-  };
-
-  const handleCaptionChange = (text: string) => {
-    dispatch(setCaption(text));
-  };
-
-  const handleContinueToCaption = () => {
+  const handleUpload = () => {
     if (!photoUri || !location) {
-      Alert.alert('Error', 'Image or location data is missing');
+      Alert.alert('Error', 'Photo or location data is missing');
       return;
     }
-    setStage('caption');
-  };
-
-  const handleSubmit = () => {
-    if (!photoUri || !location) {
-      Alert.alert('Error', 'Image or location data is missing');
-      return;
-    }
-
-    try {
-      console.log('Uploading photo with data:', {
-        photoUri: photoUri.substring(0, 30) + '...',
-        location: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude
-        },
-        caption: caption.trim() || undefined
-      });
-      
-      dispatch(uploadPhoto({
+    dispatch(
+      uploadPhoto({
         photoUri,
         location: {
           latitude: location.coords.latitude,
-          longitude: location.coords.longitude
+          longitude: location.coords.longitude,
         },
-        caption: caption.trim() || undefined
-      }));
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      Alert.alert('Upload Error', 'An unexpected error occurred while uploading the photo');
-    }
+        caption: caption.trim() || undefined,
+        hint: hint.trim() || undefined,
+      }),
+    );
   };
 
-  const retake = () => {
-    dispatch(setPhotoUri(null));
-    setStage('camera');
-  };
+  // ---- Gating / loading states -------------------------------------------
 
-  // Render loading state while checking if user can upload
   if (isCheckingUpload) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.text}>Checking upload status...</Text>
+      <View style={styles.fullCenter}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  // Render message if user cannot upload
   if (!canUpload && nextUploadTime) {
-    const nextUploadDate = new Date(nextUploadTime);
-    const formattedTime = format(nextUploadDate, 'MMM dd, yyyy h:mm a');
-    
+    const formatted = format(new Date(nextUploadTime), 'MMM dd, yyyy h:mm a');
     return (
-      <View style={[styles.container, { backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-        <Text style={styles.limitTitle}>Daily Upload Limit Reached</Text>
-        <Text style={styles.limitText}>
-          You can only upload one photo per day. You can upload again at:
-        </Text>
-        <Text style={styles.timeText}>{formattedTime}</Text>
-        <TouchableOpacity
-          style={[styles.button, { marginTop: 30 }]}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Go Back</Text>
+      <View style={styles.gateContainer}>
+        <Text style={styles.gateTitle}>Daily Upload Limit Reached</Text>
+        <Text style={styles.gateText}>You can post one photo per day. Next post:</Text>
+        <Text style={styles.gateHighlight}>{formatted}</Text>
+        <TouchableOpacity style={styles.darkButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.darkButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // Render permission loading state
-  if (hasPermission === null) {
+  if (permission === null || locationGranted === null) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.text}>Requesting permissions...</Text>
+      <View style={styles.fullCenter}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  // Render permission denied state
-  if (hasPermission === false) {
+  if (!permission.granted || !locationGranted) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>
-          Camera, gallery, or location permissions are required to use this feature.
+      <View style={styles.gateContainer}>
+        <Text style={styles.gateText}>
+          Camera and location access are required to post on Gaea.
         </Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Go Back</Text>
+        <TouchableOpacity style={styles.darkButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.darkButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // Render caption input screen
-  if (stage === 'caption') {
+  // ---- Processing (photo_processing) -------------------------------------
+
+  if (stage === 'processing' && photoUri) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: '#fff' }]}>
+      <SafeAreaView style={styles.darkScreen}>
+        <View style={styles.processingWrap}>
+          <Image source={{ uri: photoUri }} style={styles.processingImage} />
+          <View style={styles.processingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.processingText}>Tagging your location…</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ---- Compose (pre_upload) ----------------------------------------------
+
+  if (stage === 'compose' && photoUri) {
+    return (
+      <SafeAreaView style={styles.lightScreen}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView contentContainerStyle={styles.captionContainer}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => setStage('preview')}>
-                <Text style={styles.backButton}>Back</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>New Post</Text>
-              <View style={{ width: 40 }} />
+          <View style={styles.composeHeader}>
+            <TouchableOpacity onPress={() => setStage('camera')} hitSlop={8}>
+              <Ionicons name="chevron-back" size={26} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.composeTitle}>Post</Text>
+            <View style={{ width: 26 }} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.composeBody} keyboardShouldPersistTaps="handled">
+            <Image source={{ uri: photoUri }} style={styles.composeImage} />
+
+            <View style={styles.fieldRow}>
+              <Ionicons name="location-sharp" size={18} color={colors.text} />
+              <Text style={styles.addressText}>
+                {address ||
+                  (location
+                    ? `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`
+                    : 'Locating…')}
+              </Text>
             </View>
-            
-            <View style={styles.imageRow}>
-              {photoUri && (
-                <Image source={{ uri: photoUri }} style={styles.thumbnailImage} />
-              )}
+
+            <View style={styles.fieldRow}>
+              <Ionicons name="pencil" size={16} color={colors.textMuted} />
               <TextInput
-                style={styles.captionInput}
-                placeholder="Write a caption..."
+                style={styles.fieldInput}
+                placeholder="Write a caption…"
+                placeholderTextColor={colors.textMuted}
                 value={caption}
-                onChangeText={handleCaptionChange}
+                onChangeText={(t) => dispatch(setCaption(t))}
+                maxLength={200}
                 multiline
+              />
+            </View>
+
+            <View style={styles.fieldRow}>
+              <Ionicons name="bulb-outline" size={16} color={colors.textMuted} />
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="Add a hint…"
+                placeholderTextColor={colors.textMuted}
+                value={hint}
+                onChangeText={(t) => dispatch(setHint(t))}
                 maxLength={200}
               />
             </View>
-            
-            <View style={styles.locationDisplay}>
-              {location && (
-                <Text style={styles.locationDisplayText}>
-                  Location: {location.coords.latitude.toFixed(4)}, {location.coords.longitude.toFixed(4)}
-                </Text>
-              )}
-            </View>
-            
-            <View style={styles.captionActions}>
-              <TouchableOpacity
-                style={[styles.button, styles.submitButton, isUploading && styles.disabledButton]}
-                onPress={handleSubmit}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Share</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.uploadButton, isUploading && styles.disabledButton]}
+            onPress={handleUpload}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <Text style={styles.uploadButtonText}>Upload Photo</Text>
+            )}
+          </TouchableOpacity>
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
-  // Render preview screen
-  if (stage === 'preview' && photoUri) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.preview}>
-          <Image source={{ uri: photoUri }} style={styles.previewImage} />
-          
-          <View style={styles.locationInfo}>
-            {location ? (
-              <Text style={styles.locationText}>
-                Location: {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
-              </Text>
-            ) : (
-              <>
-                <Text style={styles.locationText}>Location not available</Text>
-                <TouchableOpacity onPress={getCurrentLocation}>
-                  <Text style={styles.refreshLocationText}>Refresh Location</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-          
-          <View style={styles.previewActions}>
-            <TouchableOpacity style={styles.button} onPress={retake}>
-              <Text style={styles.buttonText}>Retake</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.button, styles.uploadButton]} 
-              onPress={handleContinueToCaption}
-              disabled={!location}
-            >
-              <Text style={styles.buttonText}>Continue</Text>
-            </TouchableOpacity>
-          </View>
+  // ---- Camera (live_camera) ----------------------------------------------
+
+  return (
+    <View style={styles.darkScreen}>
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
+
+      <SafeAreaView style={styles.cameraUi} pointerEvents="box-none">
+        <View style={styles.cameraTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            hitSlop={8}
+          >
+            <Ionicons name="camera-reverse-outline" size={30} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cameraBottom}>
+          <TouchableOpacity style={styles.shutter} onPress={takePicture} activeOpacity={0.8}>
+            <View style={styles.shutterInner} />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
-    );
-  }
-
-  // Render camera screen (default)
-  console.log('CaptureScreen rendering with navigation:', 
-    navigation ? 'Navigation object exists' : 'Navigation is undefined', 
-    'canGoBack:', navigation?.canGoBack?.() ? 'true' : 'false'
-  );
-  
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.cameraContainer}>
-        {/* Wrap Camera component in error boundary */}
-        <ErrorBoundary
-          fallback={(error) => (
-            <View style={[styles.camera, { backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: 'white' }}>Camera initialization error</Text>
-              <TouchableOpacity 
-                style={{ padding: 10, backgroundColor: '#3498db', borderRadius: 5, marginTop: 20 }}
-                onPress={() => navigation.navigate('Feed')}
-              >
-                <Text style={{ color: 'white' }}>Go back</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        >
-          <Camera 
-            style={styles.camera} 
-            type={type}
-            ref={cameraRef}
-          >
-            <View style={styles.cameraControls}>
-              <TouchableOpacity
-                style={styles.flipButton}
-                onPress={() => {
-                  // Use fallback values if CameraType is undefined
-                  const backType = CameraType?.back || CAMERA_TYPES.back;
-                  const frontType = CameraType?.front || CAMERA_TYPES.front;
-                  
-                  setType(
-                    type === backType ? frontType : backType
-                  );
-                }}
-              >
-                <Text style={styles.flipText}>Flip</Text>
-              </TouchableOpacity>
-            </View>
-          </Camera>
-        </ErrorBoundary>
-        
-        <View style={styles.controls}>
-          <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-            <Text style={styles.buttonText}>Gallery</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.captureButton}
-            onPress={takePicture}
-          >
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => {
-              try {
-                console.log('Cancel button pressed, attempting to navigate');
-                if (navigation.canGoBack()) {
-                  console.log('Using navigation.goBack()');
-                  navigation.goBack();
-                } else {
-                  console.log('Using navigation.navigate("Feed")');
-                  navigation.navigate('Feed');
-                }
-              } catch (error) {
-                console.error('Navigation error from cancel button:', error);
-                // Final fallback - try to reset navigation state completely
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Feed' }],
-                });
-              }
-            }}
-          >
-            <Text style={styles.buttonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  fullCenter: {
     flex: 1,
-    backgroundColor: 'black',
-  },
-  text: {
-    color: 'white',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  errorText: {
-    color: 'white',
-    textAlign: 'center',
-    margin: 20,
-  },
-  cameraContainer: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraControls: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-  },
-  flipButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 5,
-  },
-  flipText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: 'black',
-  },
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'white',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'white',
-    borderWidth: 2,
-    borderColor: 'black',
-  },
-  galleryButton: {
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(52, 152, 219, 0.8)',
-  },
-  cancelButton: {
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(231, 76, 60, 0.8)',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  preview: {
+  darkScreen: {
     flex: 1,
-    backgroundColor: 'black',
+    backgroundColor: '#000',
+  },
+  lightScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  // Gate / permission screens
+  gateContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  gateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: spacing.md,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  gateText: {
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  gateHighlight: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  darkButton: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  darkButtonText: {
+    color: colors.onPrimary,
+    fontWeight: '600',
+  },
+  // Camera UI
+  cameraUi: {
+    flex: 1,
     justifyContent: 'space-between',
   },
-  previewImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  previewActions: {
+  cameraTop: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
-  button: {
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(52, 152, 219, 0.8)',
+  cameraBottom: {
+    alignItems: 'center',
+    paddingBottom: spacing.xl,
+  },
+  shutter: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    borderWidth: 4,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#fff',
+  },
+  // Processing
+  processingWrap: {
+    flex: 1,
+    margin: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  processingImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: undefined,
+    height: undefined,
+    resizeMode: 'cover',
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingText: {
+    color: '#fff',
+    marginTop: spacing.md,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Compose
+  composeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  composeTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  composeBody: {
+    padding: spacing.lg,
+  },
+  composeImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: radius.lg,
+    backgroundColor: colors.skeleton,
+    marginBottom: spacing.lg,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  addressText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    padding: 0,
   },
   uploadButton: {
-    backgroundColor: 'rgba(46, 204, 113, 0.8)',
-  },
-  locationInfo: {
-    padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  locationText: {
-    color: 'white',
-    textAlign: 'center',
-  },
-  refreshLocationText: {
-    color: '#3498db',
-    textAlign: 'center',
-    marginTop: 5,
-    fontWeight: 'bold',
-  },
-  // Caption screen styles
-  captionContainer: {
-    flexGrow: 1,
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    margin: spacing.lg,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    marginBottom: 16,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  backButton: {
-    color: '#3498db',
+  uploadButtonText: {
+    color: colors.onPrimary,
     fontSize: 16,
-  },
-  imageRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  thumbnailImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  captionInput: {
-    flex: 1,
-    height: 100,
-    padding: 8,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 4,
-    textAlignVertical: 'top',
-  },
-  locationDisplay: {
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 4,
-    marginBottom: 24,
-  },
-  locationDisplayText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  captionActions: {
-    marginTop: 'auto',
-    paddingVertical: 16,
-  },
-  submitButton: {
-    alignSelf: 'stretch',
-    paddingVertical: 12,
-    backgroundColor: '#3498db',
-    borderRadius: 4,
-    alignItems: 'center',
+    fontWeight: '700',
   },
   disabledButton: {
-    backgroundColor: '#bdc3c7',
-  },
-  // Upload limit screen styles
-  limitTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  limitText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  timeText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3498db',
+    opacity: 0.6,
   },
 });
 

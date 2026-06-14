@@ -20,6 +20,8 @@ interface MapGuessProps {
   /** Called with the map's current center when the user locks in their guess. */
   onGuess: (coords: { latitude: number; longitude: number }) => void;
   submitting?: boolean;
+  /** Optional clue from the poster, shown as a banner over the map. */
+  hint?: string;
 }
 
 /**
@@ -27,7 +29,7 @@ interface MapGuessProps {
  * moves) while the user pans/zooms the map underneath it, so wherever the pin
  * points when they tap "Guess" is their answer.
  */
-const MapGuess: React.FC<MapGuessProps> = ({ onGuess, submitting }) => {
+const MapGuess: React.FC<MapGuessProps> = ({ onGuess, submitting, hint }) => {
   // Track the map center as the user pans; the visible pin is a static overlay.
   const center = useRef<{ latitude: number; longitude: number }>({
     latitude: WORLD_REGION.latitude,
@@ -45,6 +47,15 @@ const MapGuess: React.FC<MapGuessProps> = ({ onGuess, submitting }) => {
           center.current = { latitude: region.latitude, longitude: region.longitude };
         }}
       />
+
+      {hint ? (
+        <View pointerEvents="none" style={styles.hintBanner}>
+          <Ionicons name="bulb-outline" size={14} color={colors.onPrimary} />
+          <Text style={styles.hintText} numberOfLines={2}>
+            {hint}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Sticky center pin — sits above the map and stays put while panning. */}
       <View pointerEvents="none" style={styles.pinWrap}>
@@ -77,6 +88,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.skeleton,
+  },
+  hintBanner: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    maxWidth: '90%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(26,26,26,0.85)',
+  },
+  hintText: {
+    color: colors.onPrimary,
+    fontSize: 13,
+    flexShrink: 1,
   },
   pinWrap: {
     ...StyleSheet.absoluteFillObject,

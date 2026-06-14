@@ -17,6 +17,10 @@ export class Photo {
   @Column({ type: "varchar", length: 200, nullable: true })
   caption: string | null;
 
+  // Optional clue shown to guessers (e.g. "somewhere in Europe 👀").
+  @Column({ type: "varchar", length: 200, nullable: true })
+  hint: string | null;
+
   @Column("float")
   latitude: number;
 
