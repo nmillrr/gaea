@@ -20,9 +20,7 @@ import PhotoCard from '../components/PhotoCard';
 import BottomNav from '../components/BottomNav';
 import { colors, spacing } from '../theme';
 
-type Props =
-  | NativeStackScreenProps<RootStackParamList, 'Feed'>
-  | NativeStackScreenProps<RootStackParamList, 'Home'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Feed'>;
 
 const { width } = Dimensions.get('window');
 
@@ -55,7 +53,11 @@ const FeedScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerSide} />
         <Text style={styles.brand}>gaea</Text>
-        <TouchableOpacity style={[styles.headerSide, styles.bell]} hitSlop={8}>
+        <TouchableOpacity
+          style={[styles.headerSide, styles.bell]}
+          hitSlop={8}
+          onPress={() => navigation.navigate('Notifications')}
+        >
           <Ionicons name="notifications-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>

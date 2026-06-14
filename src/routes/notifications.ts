@@ -3,10 +3,18 @@ import express from 'express';
 import { authenticateJWT } from '../auth/middleware';
 import {
   sendTestPushNotification,
-  registerUserDeviceToken
+  registerUserDeviceToken,
+  getActivity
 } from '../controllers/notificationController';
 
 const router = express.Router();
+
+/**
+ * Activity feed endpoint
+ * GET /notifications/activity
+ * Returns guesses/comments others made on the authenticated user's posts
+ */
+router.get('/activity', authenticateJWT, getActivity);
 
 /**
  * Test notification endpoint

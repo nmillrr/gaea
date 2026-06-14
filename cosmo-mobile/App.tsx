@@ -20,6 +20,7 @@ import CaptureScreen from './src/screens/CaptureScreen';
 import GuessScreen from './src/screens/GuessScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PhotoDetailScreen from './src/screens/PhotoDetailScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 
 // Define the type for the stack navigator parameters
 export type RootStackParamList = {
@@ -32,17 +33,18 @@ export type RootStackParamList = {
   Guess: { photoId: string };
   Profile: { userId?: string };
   PhotoDetail: { photoId: string };
+  Notifications: undefined;
 };
 
 // Create stack navigators for authenticated and unauthenticated flows
 const AuthStack = createNativeStackNavigator<RootStackParamList>();
 const MainStack = createNativeStackNavigator<RootStackParamList>();
 
-// Loading screen shown during initialization
+// Branded splash shown during initialization (init_screen mockup): the gaea
+// wordmark centered on white while auth/session state loads in the background.
 const LoadingScreen = () => (
   <View style={styles.centeredContainer}>
-    <ActivityIndicator size="large" color="#5E60CE" />
-    <Text style={styles.loadingText}>Loading...</Text>
+    <Text style={styles.brand}>gaea</Text>
   </View>
 );
 
@@ -86,6 +88,7 @@ const AppNavigator = () => {
           <MainStack.Screen name="Guess" component={GuessScreen} />
           <MainStack.Screen name="Profile" component={ProfileScreen} />
           <MainStack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+          <MainStack.Screen name="Notifications" component={NotificationsScreen} />
         </MainStack.Navigator>
       )}
       <StatusBar style="auto" />
@@ -111,9 +114,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#5E60CE',
+  brand: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#000000',
+    letterSpacing: 0.5,
   },
 });
