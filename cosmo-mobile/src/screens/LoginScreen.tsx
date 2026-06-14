@@ -90,7 +90,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.content}>
-            <Text style={styles.title}>Cosmo</Text>
+            <Text style={styles.title}>gaea</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
             
             <View style={styles.form}>

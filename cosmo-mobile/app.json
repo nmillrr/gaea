@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Cosmo",
-    "slug": "cosmo-mobile",
+    "name": "Gaea",
+    "slug": "gaea-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,9 +21,9 @@
       },
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Cosmo needs access to your camera to take photos for location guessing",
-        "NSLocationWhenInUseUsageDescription": "Cosmo needs access to your location to record photo coordinates and make guesses",
-        "NSPhotoLibraryUsageDescription": "Cosmo needs access to your photo library to allow you to upload photos"
+        "NSCameraUsageDescription": "Gaea needs access to your camera to take photos for location guessing",
+        "NSLocationWhenInUseUsageDescription": "Gaea needs access to your location to record photo coordinates and make guesses",
+        "NSPhotoLibraryUsageDescription": "Gaea needs access to your photo library to allow you to upload photos"
       }
     },
     "android": {
@@ -51,7 +51,7 @@
         [
           "expo-location",
           {
-            "locationAlwaysAndWhenInUsePermission": "Allow Cosmo to use your location."
+            "locationAlwaysAndWhenInUsePermission": "Allow Gaea to use your location."
           }
         ],
         [
@@ -63,13 +63,13 @@
         [
           "expo-camera",
           {
-            "cameraPermission": "Cosmo needs access to your camera to take photos for location guessing"
+            "cameraPermission": "Gaea needs access to your camera to take photos for location guessing"
           }
         ],
         [
           "expo-image-picker",
           {
-            "photosPermission": "Cosmo needs access to your photo library to allow you to upload photos"
+            "photosPermission": "Gaea needs access to your photo library to allow you to upload photos"
           }
         ]
     ]

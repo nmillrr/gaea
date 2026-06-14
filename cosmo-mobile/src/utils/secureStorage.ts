@@ -4,11 +4,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
 // Keys for storing the JWT token and refresh token
-const TOKEN_KEY = 'cosmo_jwt_token';
-const REFRESH_TOKEN_KEY = 'cosmo_refresh_token';
-const TOKEN_EXPIRY_KEY = 'cosmo_token_expiry';
+const TOKEN_KEY = 'gaea_jwt_token';
+const REFRESH_TOKEN_KEY = 'gaea_refresh_token';
+const TOKEN_EXPIRY_KEY = 'gaea_token_expiry';
 // Encryption key (ideally this would be generated and stored in the keychain)
-const ENCRYPTION_KEY = 'cosmo_secure_app_key';
+const ENCRYPTION_KEY = 'gaea_secure_app_key';
 
 /**
  * Encrypt a string value (for AsyncStorage fallback)

@@ -1494,13 +1494,19 @@ The condition: I need to see D30 retention data from a closed beta of at least 5
 
 ## Recommended build order (next milestones)
 
-1. **Rebrand Cosmo → Gaea** across the mobile app (low-risk, unblocks everything visually).
-2. **Re-enable maps** in `GuessScreen` and build the `map_guess` interaction (sticky center pin, world-zoom default, lock-in button) — the core loop.
-3. **Build the result screens** (`guess_accuracy_1` / `_2`) + per-post leaderboard CTA.
-4. **Reshape the feed** to match `feed.png`: bottom nav, in-card photo⇄map toggle, caption, comments-gated-by-guess.
-5. **Add `caption` (+ display location / hint)** to `Photo` and the `pre_upload` flow; verify camera-only capture and the `photo_processing` step.
-6. **Reconcile the scoring curve** with PRD §10.
-7. **Then** layer in the game-depth backbone: reveal/timer, streaks, groups, weekly leaderboards, splash + skeleton screens, notifications.
+1. ✅ **Rebrand Cosmo → Gaea** across the mobile app — *done.* `app.json` (name/slug/permission strings), secure-storage keys, and the Login/Home/Register wordmarks now read Gaea/gaea.
+2. ✅ **Re-enable maps** + build the `map_guess` interaction — *done.* New `MapGuess` component (`src/components/MapGuess.tsx`): a static center pin over a pannable `react-native-maps` `MapView` that defaults to a zoomed-out world region, with a "Guess" lock-in pill.
+3. ✅ **Build the result screens** (`guess_accuracy_1` / `_2`) + leaderboard CTA — *done.* New `GuessResult` component (`src/components/GuessResult.tsx`): swipeable two-pin distance map + points pages with a "See leaderboard" view.
+4. ✅ **Reshape the feed** to match `feed.png` — *done.* `FeedScreen` now has the `gaea` header + bell and a skeleton loading state; `BottomNav` adds the sticky home/upload/profile bar; `PhotoCard` does the in-card photo⇄map toggle, renders the caption, and locks comments until the viewer guesses.
+5. ⏳ **Caption plumbing — done; capture flow — partial.** `caption` column added to the `Photo` entity and threaded through upload/feed/detail responses (`photoController.ts`); mobile `Photo` type updated. Still TODO: the `pre_upload` reverse-geocoded address label + optional "hint" field, and enforcing **camera-only** capture (the current `CaptureScreen` still allows a gallery picker — remove for anti-spoofing) plus the `photo_processing` step.
+6. ⏳ **Reconcile the scoring curve** with PRD §10 — not started (still linear / 20 km cutoff).
+7. ⏳ **Game-depth backbone** — not started: reveal/timer, streaks, groups, weekly leaderboards, splash screen, notifications screen.
+
+## Known follow-ups surfaced during the build
+
+- **Hardcoded Google Maps API key** is committed in `cosmo-mobile/app.json` (iOS + Android + the maps plugin). Restrict it by bundle ID / SHA in the Google Cloud console, and ideally move it to an EAS secret / env injection. It is already in git history — rotate it.
+- `cosmo-mobile` package `name` is still `cosmo-mobile`; pre-existing TypeScript errors remain in `CaptureScreen.tsx`, `ProfileScreen.tsx`, `useAuth.ts`, and the mobile test suite (missing `@testing-library/react-native` / `redux-mock-store` dev deps). None block the new feed/guess work, but they should be cleaned up.
+- Comment posting is **gated** in the UI but not yet **persisted** — the `Comment` entity exists with no create/list endpoint wired to the card.
 
 ---
 

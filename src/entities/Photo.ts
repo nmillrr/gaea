@@ -14,6 +14,9 @@ export class Photo {
   @Column()
   s3_key: string;
 
+  @Column({ type: "varchar", length: 200, nullable: true })
+  caption: string | null;
+
   @Column("float")
   latitude: number;
 

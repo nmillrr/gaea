@@ -10,6 +10,7 @@ export interface Photo {
     avatar_url?: string;
   };
   created_at: string;
+  caption?: string;
   latitude?: number;
   longitude?: number;
 }

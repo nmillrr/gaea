@@ -97,7 +97,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Cosmo</Text>
+        <Text style={styles.title}>gaea</Text>
         <TouchableOpacity onPress={handleProfilePress}>
           <Image
             source={{ uri: user?.avatarUrl || 'https://via.placeholder.com/40' }}

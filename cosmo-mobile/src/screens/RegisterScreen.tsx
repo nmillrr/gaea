@@ -109,7 +109,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.content}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join Cosmo and start your geo-guessing adventure</Text>
+            <Text style={styles.subtitle}>Join Gaea and start your geo-guessing adventure</Text>
             
             <View style={styles.form}>
               <TextInput
