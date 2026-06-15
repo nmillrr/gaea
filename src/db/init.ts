@@ -6,6 +6,8 @@ import { Photo } from "../entities/Photo";
 import { Guess } from "../entities/Guess";
 import { Friendship } from "../entities/Friendship";
 import { Comment } from "../entities/Comment";
+import { Group } from "../entities/Group";
+import { GroupMember } from "../entities/GroupMember";
 
 // Load environment variables
 dotenv.config();
@@ -19,7 +21,7 @@ const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "cosmo",
   synchronize: true,
   logging: true,
-  entities: [User, Photo, Guess, Friendship, Comment],
+  entities: [User, Photo, Guess, Friendship, Comment, Group, GroupMember],
   subscribers: [],
   migrations: [],
 });
