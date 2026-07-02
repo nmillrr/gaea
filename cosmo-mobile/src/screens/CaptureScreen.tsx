@@ -233,7 +233,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
             <TouchableOpacity onPress={() => setStage('camera')} hitSlop={8}>
               <Ionicons name="chevron-back" size={26} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.composeTitle}>Post</Text>
+            <Text style={styles.composeTitle}>New post</Text>
             <View style={{ width: 26 }} />
           </View>
 
@@ -267,7 +267,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons name="bulb-outline" size={16} color={colors.textMuted} />
               <TextInput
                 style={styles.fieldInput}
-                placeholder="Add a hint…"
+                placeholder="Add a hint for guessers…"
                 placeholderTextColor={colors.textMuted}
                 value={hint}
                 onChangeText={(t) => dispatch(setHint(t))}
@@ -284,7 +284,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
             {isUploading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.uploadButtonText}>Upload Photo</Text>
+              <Text style={styles.uploadButtonText}>Share to Gaea</Text>
             )}
           </TouchableOpacity>
         </KeyboardAvoidingView>

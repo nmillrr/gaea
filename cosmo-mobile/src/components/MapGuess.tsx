@@ -59,7 +59,7 @@ const MapGuess: React.FC<MapGuessProps> = ({ onGuess, submitting, hint }) => {
 
       {/* Sticky center pin — sits above the map and stays put while panning. */}
       <View pointerEvents="none" style={styles.pinWrap}>
-        <Ionicons name="location-sharp" size={40} color={colors.pinGuess} />
+        <Ionicons name="location-sharp" size={40} color={colors.pinDrop} />
       </View>
 
       {!ready && (

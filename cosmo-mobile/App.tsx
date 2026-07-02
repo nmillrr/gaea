@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { store } from './src/store';
 import { useAuth } from './src/hooks/useAuth';
 import { RootState } from './src/store';
+import { fonts } from './src/theme';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -21,6 +22,8 @@ import GuessScreen from './src/screens/GuessScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PhotoDetailScreen from './src/screens/PhotoDetailScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
+import LeaderboardScreen from './src/screens/LeaderboardScreen';
+import CommentsScreen from './src/screens/CommentsScreen';
 
 // Define the type for the stack navigator parameters
 export type RootStackParamList = {
@@ -34,6 +37,8 @@ export type RootStackParamList = {
   Profile: { userId?: string };
   PhotoDetail: { photoId: string };
   Notifications: undefined;
+  Leaderboard: undefined;
+  Comments: { photoId: string };
 };
 
 // Create stack navigators for authenticated and unauthenticated flows
@@ -89,6 +94,8 @@ const AppNavigator = () => {
           <MainStack.Screen name="Profile" component={ProfileScreen} />
           <MainStack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
           <MainStack.Screen name="Notifications" component={NotificationsScreen} />
+          <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
+          <MainStack.Screen name="Comments" component={CommentsScreen} />
         </MainStack.Navigator>
       )}
       <StatusBar style="auto" />
@@ -115,9 +122,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   brand: {
-    fontSize: 32,
+    fontFamily: fonts.brand,
+    fontSize: 38,
     fontWeight: '700',
-    color: '#000000',
+    color: '#111111',
     letterSpacing: 0.5,
   },
 });

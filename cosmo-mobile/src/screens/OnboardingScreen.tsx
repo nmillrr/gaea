@@ -1,325 +1,111 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput,
-  TouchableOpacity, 
-  Image, 
-  Platform,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  ScrollView
-} from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
-import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { RootState } from '../store';
 import { RootStackParamList } from '../../App';
-import { updateUserProfile, uploadAvatar } from '../store/slices/authSlice';
-import { AppDispatch } from '../store';
 import { useAuth } from '../hooks/useAuth';
+import { colors, spacing, radius } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
-const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { user, isLoading, error } = useSelector((state: RootState) => state.auth);
+const STEPS: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
+  {
+    icon: 'camera-outline',
+    title: 'Snap where you are',
+    body: 'Photos are taken live in-app and tagged with your location automatically — so nobody can fake a spot.',
+  },
+  {
+    icon: 'earth-outline',
+    title: 'Guess where they are',
+    body: 'Drop a pin anywhere on the world map. The closer your guess, the more points you earn.',
+  },
+  {
+    icon: 'bar-chart-outline',
+    title: 'Climb the leaderboard',
+    body: 'Beat your friends and the world. Fresh photos to guess every single day.',
+  },
+];
+
+/** 3-step intro carousel (per prototype). Finishing marks onboarding complete. */
+const OnboardingScreen: React.FC<Props> = () => {
   const { completeOnboarding } = useAuth();
-  
-  const [username, setUsername] = useState<string>(user?.username || '');
-  const [avatar, setAvatar] = useState<string | null>(user?.avatarUrl || null);
-  const [imageFile, setImageFile] = useState<any>(null);
-  const [usernameError, setUsernameError] = useState<string>('');
-  const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
+  const [step, setStep] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert(
-            'Permission Required',
-            'Sorry, we need camera roll permissions to upload an avatar!'
-          );
-        }
-      }
-    })();
-  }, []);
+  const finish = () => completeOnboarding();
+  const next = () => (step < STEPS.length - 1 ? setStep(step + 1) : finish());
 
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
+  const s = STEPS[step];
 
-      if (!result.canceled) {
-        console.log('Selected image:', result.assets[0]);
-        
-        // Get file extension from URI
-        const uri = result.assets[0].uri;
-        const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
-        
-        setAvatar(uri);
-        setImageFile({
-          uri: uri,
-          type: mimeType,
-          name: `avatar.${fileExtension}`,
-        });
-        
-        console.log('Image file prepared:', {
-          uri: uri,
-          type: mimeType,
-          name: `avatar.${fileExtension}`,
-        });
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick an image. Please try again.');
-    }
-  };
-
-  const validateForm = (): boolean => {
-    let isValid = true;
-
-    // Validate username
-    if (!username.trim()) {
-      setUsernameError('Username is required');
-      isValid = false;
-    } else if (username.length < 3) {
-      setUsernameError('Username must be at least 3 characters');
-      isValid = false;
-    } else {
-      setUsernameError('');
-    }
-
-    return isValid;
-  };
-
-  const handleSubmit = async () => {
-    setFormSubmitted(true);
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      try {
-        // First upload avatar if exists
-        if (imageFile) {
-          const formData = new FormData();
-          // Make sure we're using the correct field name expected by the backend
-          formData.append('avatar', imageFile);
-          
-          console.log('About to upload avatar');
-          const uploadResult = await dispatch(uploadAvatar(formData)).unwrap();
-          console.log('Avatar upload successful:', uploadResult);
-          
-          // Update profile with username and avatar URL
-          await dispatch(updateUserProfile({ 
-            username,
-            avatarUrl: uploadResult.avatarUrl
-          })).unwrap();
-        } else {
-          // Just update the username if no avatar selected
-          await dispatch(updateUserProfile({ username })).unwrap();
-        }
-      } catch (error) {
-        console.error('Profile update error:', error);
-        throw error; // Re-throw to trigger the outer catch block
-      }
-      
-      console.log('Profile updated successfully, completing onboarding');
-      
-      // Update the Redux state to mark onboarding as complete
-      completeOnboarding();
-      
-      console.log('Onboarding marked as complete, navigating to Feed screen');
-      
-      // Navigate to Feed screen instead of Home
-      navigation.replace('Feed');
-    } catch (err) {
-      console.error('Final submission error:', err);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    }
-  };
-  
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Complete Your Profile</Text>
-            <Text style={styles.headerSubtitle}>Set up your profile to get started</Text>
-          </View>
-          
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
-              {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarPlaceholderText}>Add Photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <Text style={styles.avatarHelperText}>Tap to choose an avatar</Text>
-          </View>
-          
-          <View style={styles.formContainer}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={[
-                styles.input,
-                formSubmitted && usernameError ? styles.inputError : null
-              ]}
-              placeholder="Enter your username"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
-            {formSubmitted && usernameError ? (
-              <Text style={styles.errorText}>{usernameError}</Text>
-            ) : null}
-          </View>
-          
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3498db" />
-              <Text style={styles.loadingText}>Updating profile...</Text>
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={styles.button} 
-              onPress={handleSubmit}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>Complete Profile</Text>
-            </TouchableOpacity>
-          )}
-          
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <View style={styles.skipRow}>
+        <TouchableOpacity onPress={finish} hitSlop={8}>
+          <Text style={styles.skip}>Skip</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.body}>
+        <View style={styles.iconCircle}>
+          <Ionicons name={s.icon} size={62} color={colors.accent} />
+        </View>
+        <Text style={styles.title}>{s.title}</Text>
+        <Text style={styles.text}>{s.body}</Text>
+      </View>
+
+      <View style={styles.dots}>
+        {STEPS.map((_, i) => (
+          <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
+        ))}
+      </View>
+
+      <TouchableOpacity style={styles.button} onPress={next} activeOpacity={0.85}>
+        <Text style={styles.buttonText}>{step < STEPS.length - 1 ? 'Next' : 'Get started'}</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: colors.background },
+  skipRow: { flexDirection: 'row', justifyContent: 'flex-end', padding: 22 },
+  skip: { color: colors.textMuted, fontSize: 14 },
+  body: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    padding: 24,
-    flexGrow: 1,
-  },
-  header: {
-    marginBottom: 32,
     alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatarButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-  },
-  avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#e1e4e8',
-    borderRadius: 60,
     justifyContent: 'center',
+    paddingHorizontal: 42,
+  },
+  iconCircle: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
+    backgroundColor: colors.accentSoftAlt,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 34,
   },
-  avatarPlaceholderText: {
-    color: '#666',
-    fontSize: 14,
+  title: { fontSize: 24, fontWeight: '800', color: colors.textStrong, textAlign: 'center' },
+  text: {
+    color: colors.textMuted,
+    fontSize: 15.5,
+    lineHeight: 23,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
-  avatarHelperText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  formContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f4f4f4',
-    height: 50,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e1e4e8',
-  },
-  inputError: {
-    borderColor: '#ff3b30',
-  },
-  errorText: {
-    color: '#ff3b30',
-    fontSize: 14,
-    marginTop: 4,
-  },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 7, paddingVertical: 18 },
+  dot: { height: 8, width: 8, borderRadius: radius.pill, backgroundColor: colors.border },
+  dotActive: { width: 22, backgroundColor: colors.primary },
   button: {
-    backgroundColor: '#3498db',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
+    marginHorizontal: 22,
+    marginBottom: 26,
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 16,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
+  buttonText: { color: colors.onPrimary, fontWeight: '700', fontSize: 16 },
 });
 
 export default OnboardingScreen;

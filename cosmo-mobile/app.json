@@ -54,12 +54,7 @@
             "locationAlwaysAndWhenInUsePermission": "Allow Gaea to use your location."
           }
         ],
-        [
-          "react-native-maps",
-          {
-            "googleMapsApiKey": "AIzaSyAc80wlVDRnuhqSICbtKvZOax3tBITOjW0"
-          }
-        ],
+
         [
           "expo-camera",
           {

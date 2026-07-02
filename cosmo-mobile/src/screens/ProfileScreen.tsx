@@ -1,740 +1,272 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Image, 
-  TouchableOpacity, 
-  FlatList, 
-  ActivityIndicator, 
-  Alert, 
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
   Dimensions,
-  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-// Temporarily commenting out the maps import until it's properly configured
-// import MapView, { Marker, PROVIDER_GOOGLE, Callout } from 'react-native-maps';
-import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 
-import { RootState } from '../store';
+import { RootState, AppDispatch } from '../store';
 import { logout } from '../store/slices/authSlice';
 import { RootStackParamList } from '../../App';
-import { photoApi } from '../api/photoApi';
+import { photoApi, Photo } from '../api/photoApi';
+import BottomNav from '../components/BottomNav';
+import { colors, spacing, radius } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
-interface Photo {
-  id: string;
-  s3_url: string;
-  created_at: string;
-  latitude?: number;
-  longitude?: number;
-}
-
-interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  avatar_url?: string;
-  created_at: string;
-}
-
 const { width } = Dimensions.get('window');
+const GRID_GAP = 2;
+const CELL = (width - GRID_GAP * 2) / 3;
 
+/**
+ * Profile — post grid + stats + "this week" highlight, per the prototype.
+ *
+ * Points and global rank need a profile-stats endpoint that doesn't exist yet
+ * (see PRD §22 backlog); they render as "—" until that lands. Post count and the
+ * grid use real data from `GET /users/me/photos`.
+ */
 const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
   const { userId } = route.params || {};
   const { user: currentUser } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch();
-  
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [userPhotos, setUserPhotos] = useState<Photo[]>([]);
-  const [photosWithLocation, setPhotosWithLocation] = useState<Photo[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFriend, setIsFriend] = useState(false);
-  const [friendRequestSent, setFriendRequestSent] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  
-  // const mapRef = useRef<MapView | null>(null);
+
   const isCurrentUser = !userId || userId === currentUser?.id;
-  
-  useEffect(() => {
-    fetchProfileData();
-  }, [userId]);
-  
-  useEffect(() => {
-    // Filter photos that have location data
-    const photosWithCoordinates = userPhotos.filter(
-      photo => photo.latitude !== undefined && photo.longitude !== undefined
-    );
-    setPhotosWithLocation(photosWithCoordinates);
-  }, [userPhotos]);
 
-  const fetchProfileData = async () => {
-    try {
-      setLoading(true);
-      
-      if (isCurrentUser) {
-        // Current user's profile
-        setProfile({
-          id: currentUser!.id,
-          username: currentUser!.username,
-          email: currentUser!.email,
-          avatar_url: currentUser!.avatarUrl,
-          created_at: new Date().toISOString() // We don't have this from auth state
-        });
-        
-        // Fetch current user's photos with the new endpoint
-        try {
-          const photosResponse = await photoApi.getUserPhotos();
-          setUserPhotos(photosResponse.photos);
-        } catch (err) {
-          // Fallback to old endpoint if the new one is not available
-          const photosResponse = await photoApi.getFeed();
-          // Filter to only include user's photos
-          const myPhotos = photosResponse.photos.filter(photo => photo.user.id === currentUser!.id);
-          setUserPhotos(myPhotos);
-        }
-      } else {
-        // Other user's profile
-        const profileResponse = await photoApi.getUserPhotos();
-        setProfile(profileResponse.data);
-        
-        // Check friendship status
-        const friendshipResponse = await photoApi.getUserPhotos();
-        setIsFriend(friendshipResponse.data.status === 'accepted');
-        setFriendRequestSent(friendshipResponse.data.status === 'pending');
-        
-        // Fetch user's photos (if friends)
-        if (friendshipResponse.data.status === 'accepted') {
-          const photosResponse = await photoApi.getFeed();
-          // Filter to only include this user's photos
-          const theirPhotos = photosResponse.photos.filter(photo => photo.user.id === userId);
-          setUserPhotos(theirPhotos);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleSendFriendRequest = async () => {
-    if (!profile) return;
-    
-    try {
-      await photoApi.getUserPhotos();
-      setFriendRequestSent(true);
-      Alert.alert('Success', 'Friend request sent');
-    } catch (error: any) {
-      console.error('Error sending friend request:', error);
-      Alert.alert('Error', error.response?.data?.message || 'Failed to send friend request');
-    }
-  };
-  
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: () => {
-            dispatch(logout());
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        if (isCurrentUser) {
+          try {
+            const res = await photoApi.getUserPhotos();
+            setPhotos(res.photos);
+          } catch {
+            const feed = await photoApi.getFeed();
+            setPhotos(feed.photos.filter((p) => p.user.id === currentUser?.id));
           }
+        } else {
+          const feed = await photoApi.getFeed();
+          setPhotos(feed.photos.filter((p) => p.user.id === userId));
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        Alert.alert('Error', 'Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
+
+  const handleSignOut = () => {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: () => {
+          dispatch(logout());
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const handleToggleView = () => {
-    // For now, keep in grid view until maps are properly configured
-    Alert.alert('Maps Temporarily Disabled', 'Map view is currently unavailable until the maps integration is properly configured.');
-    // setViewMode(viewMode === 'grid' ? 'map' : 'grid');
-  };
+  const username = isCurrentUser ? currentUser?.username : photos[0]?.user.username;
+  const stats = [
+    { n: String(photos.length), l: 'posts' },
+    { n: '—', l: 'points' },
+    { n: '—', l: 'global' },
+  ];
 
-  const handleMarkerPress = (photo: Photo) => {
-    setSelectedPhoto(photo);
-    setModalVisible(true);
-  };
-
-  // Commented out until maps are properly configured
-  /*
-  const handleMapReady = () => {
-    if (photosWithLocation.length > 0 && mapRef.current) {
-      const coordinates = photosWithLocation.map(photo => ({
-        latitude: photo.latitude!,
-        longitude: photo.longitude!
-      }));
-      
-      mapRef.current.fitToCoordinates(coordinates, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true
-      });
-    }
-  };
-  */
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM d, yyyy');
-  };
-  
-  const renderPhotoItem = ({ item }: { item: Photo }) => (
-    <TouchableOpacity
-      style={styles.photoItem}
-      onPress={() => navigation.navigate('PhotoDetail', { photoId: item.id })}
-    >
-      <Image
-        source={{ uri: item.s3_url }}
-        style={styles.photoThumbnail}
-      />
-    </TouchableOpacity>
-  );
-
-  const renderListPhotoItem = ({ item }: { item: Photo }) => (
-    <TouchableOpacity
-      style={styles.listPhotoItem}
-      onPress={() => navigation.navigate('PhotoDetail', { photoId: item.id })}
-    >
-      <Image
-        source={{ uri: item.s3_url }}
-        style={styles.listPhotoThumbnail}
-      />
-      <View style={styles.listPhotoInfo}>
-        <Text style={styles.listPhotoTimestamp}>{formatDate(item.created_at)}</Text>
-        {item.latitude !== undefined && item.longitude !== undefined ? (
-          <Text style={styles.locationAvailableText}>📍 Location Available</Text>
-        ) : (
-          <Text style={styles.noLocationText}>No Location Data</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-  
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
-      </SafeAreaView>
-    );
-  }
-  
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        
-        {isCurrentUser && (
-          <TouchableOpacity 
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutButtonText}>Logout</Text>
+        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>{username || 'Profile'}</Text>
+        {isCurrentUser ? (
+          <TouchableOpacity onPress={handleSignOut} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={23} color={colors.text} />
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
         )}
       </View>
-      
-      <View style={styles.profileHeader}>
-        <Image
-          source={{ uri: profile?.avatar_url || 'https://via.placeholder.com/100' }}
-          style={styles.profileImage}
-        />
-        
-        <Text style={styles.username}>{profile?.username}</Text>
-        
-        {!isCurrentUser && (
-          <View style={styles.friendshipContainer}>
-            {isFriend ? (
-              <View style={styles.friendBadge}>
-                <Text style={styles.friendBadgeText}>Friends</Text>
-              </View>
-            ) : friendRequestSent ? (
-              <View style={styles.pendingBadge}>
-                <Text style={styles.pendingBadgeText}>Request Sent</Text>
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={styles.addFriendButton}
-                onPress={handleSendFriendRequest}
-              >
-                <Text style={styles.addFriendButtonText}>Add Friend</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
-      
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{userPhotos.length}</Text>
-          <Text style={styles.statLabel}>Photos</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{photosWithLocation.length}</Text>
-          <Text style={styles.statLabel}>Mapped</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>Points</Text>
-        </View>
-      </View>
-      
-      <View style={styles.divider} />
-      
-      <View style={styles.photosHeader}>
-        <Text style={styles.sectionTitle}>Photos</Text>
-        
-        {userPhotos.length > 0 && (
-          <TouchableOpacity 
-            style={[
-              styles.viewToggleButton,
-              viewMode === 'map' ? styles.mapActiveButton : styles.gridActiveButton
-            ]}
-            onPress={handleToggleView}
-          >
-            <Text style={styles.viewToggleText}>
-              {viewMode === 'grid' ? '🗺️ Map View' : '📷 Grid View'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {userPhotos.length === 0 ? (
-        <View style={styles.emptyPhotosContainer}>
-          <Text style={styles.emptyPhotosText}>
-            {isCurrentUser 
-              ? "You haven't shared any photos yet" 
-              : "This user hasn't shared any photos yet"}
-          </Text>
-          
-          {isCurrentUser && (
-            <TouchableOpacity 
-              style={styles.captureButton}
-              onPress={() => navigation.navigate('Capture')}
-            >
-              <Text style={styles.captureButtonText}>Take a Photo</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : (
-        <View style={styles.photoViewContainer}>
-          <FlatList
-            data={userPhotos}
-            renderItem={renderPhotoItem}
-            keyExtractor={(item) => item.id}
-            numColumns={3}
-            contentContainerStyle={styles.photoGrid}
-          />
-        </View>
-      )
-      /* Maps functionality temporarily disabled
-      ) : (
-        <View style={styles.photoViewContainer}>
-          <View style={styles.mapContainer}>
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              provider={PROVIDER_GOOGLE}
-              initialRegion={{
-                latitude: 37.78825,
-                longitude: -122.4324,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}
-              onMapReady={handleMapReady}
-            >
-              {photosWithLocation.map((photo) => (
-                <Marker
-                  key={photo.id}
-                  coordinate={{
-                    latitude: photo.latitude!,
-                    longitude: photo.longitude!
-                  }}
-                  onPress={() => handleMarkerPress(photo)}
-                >
-                  <Callout tooltip>
-                    <View style={styles.markerCallout}>
-                      <Image
-                        source={{ uri: photo.s3_url }}
-                        style={styles.calloutImage}
-                      />
-                      <Text style={styles.calloutText}>
-                        {formatDate(photo.created_at)}
-                      </Text>
-                    </View>
-                  </Callout>
-                </Marker>
-              ))}
-            </MapView>
-          </View>
-          
-          <FlatList
-            data={userPhotos}
-            renderItem={renderListPhotoItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.photoList}
-            horizontal={false}
-          />
-        </View>
-      )
-      */}
 
-      {/* Modal for selected photo from map */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-            
-            {selectedPhoto && (
-              <>
-                <Image
-                  source={{ uri: selectedPhoto.s3_url }}
-                  style={styles.modalImage}
-                  resizeMode="contain"
-                />
-                <Text style={styles.modalDate}>{formatDate(selectedPhoto.created_at)}</Text>
-                
-                <TouchableOpacity
-                  style={styles.viewDetailButton}
-                  onPress={() => {
-                    setModalVisible(false);
-                    navigation.navigate('PhotoDetail', { photoId: selectedPhoto.id });
-                  }}
-                >
-                  <Text style={styles.viewDetailButtonText}>View Details</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.primary} />
         </View>
-      </Modal>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.topRow}>
+            <Image
+              source={{ uri: currentUser?.avatarUrl || 'https://via.placeholder.com/78' }}
+              style={styles.avatar}
+            />
+            <View style={styles.statsRow}>
+              {stats.map((s) => (
+                <View key={s.l} style={styles.stat}>
+                  <Text style={styles.statNum}>{s.n}</Text>
+                  <Text style={styles.statLabel}>{s.l}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.nameBlock}>
+            <Text style={styles.name}>{username}</Text>
+            <Text style={styles.bio}>Chasing façades and golden hours. One post a day.</Text>
+          </View>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.outlineBtn} activeOpacity={0.7}>
+              <Text style={styles.outlineBtnText}>Edit profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.darkBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('Leaderboard')}
+            >
+              <Text style={styles.darkBtnText}>Leaderboard</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.weekCard}>
+            <View>
+              <Text style={styles.weekLabel}>THIS WEEK</Text>
+              <Text style={styles.weekValue}>Rank & points coming soon</Text>
+            </View>
+            <View style={styles.weekIcon}>
+              <Ionicons name="trending-up" size={22} color="#fff" />
+            </View>
+          </View>
+
+          {photos.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>
+                {isCurrentUser ? "You haven't posted yet." : 'No posts yet.'}
+              </Text>
+              {isCurrentUser && (
+                <TouchableOpacity
+                  style={styles.darkBtn}
+                  onPress={() => navigation.navigate('Capture')}
+                >
+                  <Text style={styles.darkBtnText}>Take a photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {photos.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.cell}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('PhotoDetail', { photoId: p.id })}
+                >
+                  <Image source={{ uri: p.s3_url }} style={styles.cellImg} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      <BottomNav active="profile" />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
+    paddingHorizontal: 18,
+    paddingVertical: spacing.sm,
   },
-  backButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
-  backButtonText: {
-    color: '#3498db',
-    fontSize: 16,
-  },
-  logoutButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-  },
-  logoutButtonText: {
-    color: '#e74c3c',
-    fontSize: 16,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  friendshipContainer: {
-    marginTop: 10,
-  },
-  addFriendButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  addFriendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  friendBadge: {
-    backgroundColor: '#2ecc71',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  friendBadgeText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  pendingBadge: {
-    backgroundColor: '#f39c12',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  pendingBadgeText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  statsContainer: {
+  headerTitle: { fontSize: 17, fontWeight: '700', color: colors.textStrong },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingVertical: 15,
-    backgroundColor: '#f8f8f8',
-  },
-  statItem: {
     alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: '#666',
-    fontSize: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  photosHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  viewToggleButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: '#f0f0f0',
-  },
-  gridActiveButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  mapActiveButton: {
-    backgroundColor: '#e1f5fe',
-  },
-  viewToggleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-  },
-  emptyPhotosContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyPhotosText: {
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  captureButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 10,
+    gap: 22,
     paddingHorizontal: 20,
-    borderRadius: 5,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
-  captureButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  avatar: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: colors.avatar,
   },
-  photoViewContainer: {
+  statsRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
+  stat: { alignItems: 'center' },
+  statNum: { fontWeight: '800', fontSize: 19, color: colors.textStrong },
+  statLabel: { color: colors.textMuted, fontSize: 12.5, marginTop: 1 },
+  nameBlock: { paddingHorizontal: 20, paddingTop: 10 },
+  name: { fontWeight: '700', fontSize: 14.5, color: colors.textStrong },
+  bio: { color: colors.text, fontSize: 13.5, lineHeight: 19, marginTop: 2 },
+  actionRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
+  outlineBtn: {
     flex: 1,
-  },
-  photoGrid: {
-    padding: 5,
-  },
-  photoItem: {
-    flex: 1/3,
-    aspectRatio: 1,
-    padding: 2,
-  },
-  photoThumbnail: {
-    flex: 1,
-    borderRadius: 2,
-  },
-  // Map view styles
-  mapContainer: {
-    height: width * 0.8, // Make the map square
-    marginBottom: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  map: {
-    flex: 1,
-  },
-  photoList: {
-    paddingHorizontal: 10,
-  },
-  listPhotoItem: {
-    flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
-    marginVertical: 5,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  listPhotoThumbnail: {
-    width: 80,
-    height: 80,
-  },
-  listPhotoInfo: {
-    flex: 1,
-    padding: 10,
-    justifyContent: 'center',
-  },
-  listPhotoTimestamp: {
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  locationAvailableText: {
-    color: '#2ecc71',
-    fontSize: 12,
-  },
-  noLocationText: {
-    color: '#95a5a6',
-    fontSize: 12,
-  },
-  markerCallout: {
-    width: 150,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 5,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  calloutImage: {
-    width: '100%',
-    height: 100,
-    borderRadius: 4,
-    marginBottom: 5,
-  },
-  calloutText: {
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 9,
+    paddingVertical: 9,
   },
-  modalContent: {
-    width: width * 0.9,
-    backgroundColor: 'white',
+  outlineBtnText: { fontWeight: '600', fontSize: 13.5, color: colors.text },
+  darkBtn: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 9,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+  },
+  darkBtnText: { fontWeight: '600', fontSize: 13.5, color: colors.onPrimary },
+  weekCard: {
+    marginHorizontal: 20,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    backgroundColor: colors.accentSoft,
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weekLabel: { color: colors.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  weekValue: { color: colors.textStrong, fontWeight: '800', fontSize: 16, marginTop: 2 },
+  weekIcon: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
   },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalImage: {
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: 8,
-    marginVertical: 10,
-  },
-  modalDate: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 15,
-  },
-  viewDetailButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginTop: 10,
-  },
-  viewDetailButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, paddingBottom: spacing.md },
+  cell: { width: CELL, height: CELL, backgroundColor: colors.skeleton },
+  cellImg: { width: '100%', height: '100%' },
+  empty: { alignItems: 'center', padding: spacing.xl, gap: spacing.md },
+  emptyText: { color: colors.textMuted, fontSize: 15 },
 });
 
 export default ProfileScreen;

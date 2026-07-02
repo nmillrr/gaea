@@ -27,7 +27,7 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "expo": "^52.0.46",
+    "expo": "~54.0.0",
     "express": "^5.1.0",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
@@ -37,10 +37,10 @@
     "multer-s3": "^3.0.1",
     "pg": "^8.15.5",
     "postgis": "^1.0.5",
+    "react-native-maps": "1.18.0",
     "reflect-metadata": "^0.2.2",
     "sharp": "^0.34.1",
-    "typeorm": "^0.3.22",
-    "react-native-maps": "1.18.0"
+    "typeorm": "^0.3.22"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

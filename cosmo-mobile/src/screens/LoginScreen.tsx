@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -18,200 +17,149 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootState, AppDispatch } from '../store';
 import { login, clearError } from '../store/slices/authSlice';
 import { RootStackParamList } from '../../App';
+import { colors, spacing, radius, fonts } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+  const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
+
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated, isLoading, error } = useSelector((state: RootState) => state.auth);
-  
-  // Clear any errors when component mounts
+
   useEffect(() => {
     dispatch(clearError());
   }, [dispatch]);
-  
-  // Navigate to onboarding screen if authenticated
+
   useEffect(() => {
-    if (isAuthenticated) {
-      navigation.replace('Onboarding');
-    }
+    if (isAuthenticated) navigation.replace('Onboarding');
   }, [isAuthenticated, navigation]);
-  
-  // Display error message if auth fails - but only when error is triggered by a login attempt
-  // not when the component initially mounts
-  const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
+
   useEffect(() => {
-    if (error && hasAttemptedLogin) {
-      Alert.alert('Login Error', error);
-    }
+    if (error && hasAttemptedLogin) Alert.alert('Login Error', error);
   }, [error, hasAttemptedLogin]);
-  
-  const validateInputs = (): boolean => {
-    // Basic validation
-    if (!email.trim()) {
-      Alert.alert('Error', 'Email is required');
-      return false;
-    }
-    
-    if (!password) {
-      Alert.alert('Error', 'Password is required');
-      return false;
-    }
-    
-    // Basic email validation
+
+  const handleLogin = () => {
+    if (!email.trim()) return Alert.alert('Error', 'Email is required');
+    if (!password) return Alert.alert('Error', 'Password is required');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return false;
-    }
-    
-    return true;
-  };
-  
-  const handleLogin = async () => {
-    if (!validateInputs()) return;
-    
-    // Set that we've attempted login to show any error messages
+    if (!emailRegex.test(email)) return Alert.alert('Error', 'Please enter a valid email address');
     setHasAttemptedLogin(true);
-    
-    // Dispatch login action
     dispatch(login({ email, password }));
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.scrollView}>
-          <View style={styles.content}>
-            <Text style={styles.title}>gaea</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
-            
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                testID="email-input"
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                testID="password-input"
-              />
-              
-              <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
-                onPress={handleLogin}
-                disabled={isLoading}
-                testID="login-button"
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.buttonText}>Log In</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
-              <TouchableOpacity 
-                onPress={() => navigation.navigate('Register')}
-                testID="register-link"
-              >
-                <Text style={styles.footerLink}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.content}>
+          <Text style={styles.brand}>gaea</Text>
+          <Text style={styles.tagline}>Guess the world, one photo at a time.</Text>
+
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder="Username or email"
+              placeholderTextColor={colors.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              testID="email-input"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              testID="password-input"
+            />
+            <TouchableOpacity
+              style={[styles.button, isLoading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={isLoading}
+              testID="login-button"
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <Text style={styles.buttonText}>Log in</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+
+          <Text style={styles.forgot}>Forgot password?</Text>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            New here?{' '}
+            <Text style={styles.footerLink} onPress={() => navigation.navigate('Register')}>
+              Create account
+            </Text>
+          </Text>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 36,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  brand: {
+    fontFamily: fonts.brand,
+    fontSize: 46,
+    fontWeight: '700',
+    color: colors.textStrong,
+  },
+  tagline: {
+    color: colors.textMuted,
+    fontSize: 14.5,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
-  },
+  form: { width: '100%', marginTop: 36, gap: spacing.md },
   input: {
-    height: 50,
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    fontSize: 16,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 15,
+    backgroundColor: '#FAFAFA',
+    color: colors.text,
   },
   button: {
-    backgroundColor: '#3498db',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 15,
+    borderRadius: radius.md,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: spacing.xs,
   },
-  buttonDisabled: {
-    backgroundColor: '#a4cfed',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: colors.onPrimary, fontSize: 15, fontWeight: '700' },
+  forgot: { color: colors.textMuted, fontSize: 13, marginTop: 18 },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 30,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    padding: 18,
+    alignItems: 'center',
   },
-  footerText: {
-    color: '#666',
-  },
-  footerLink: {
-    color: '#3498db',
-    fontWeight: 'bold',
-    marginLeft: 5,
-  },
+  footerText: { fontSize: 14, color: colors.text },
+  footerLink: { color: colors.accent, fontWeight: '700' },
 });
 
 export default LoginScreen;

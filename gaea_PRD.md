@@ -1507,6 +1507,35 @@ The condition: I need to see D30 retention data from a closed beta of at least 5
 
 **Schema note:** `Photo` gained `caption` and `hint` columns. With TypeORM `synchronize` on in dev these apply automatically; for any non-synchronize environment, generate a migration before deploying.
 
+---
+
+## SECTION 23: Prototype alignment (Claude Design handoff)
+
+_Source of truth for the frontend visual language: `geoguessr-social-app-design/project/Gaea Prototype.dc.html` (a Claude Design handoff bundle). Implemented as the visual/engineering reference for the React Native app. The prototype is web HTML/CSS; it was translated into RN components, not copied verbatim._
+
+**Design tokens (`src/theme.ts`)** — aligned to the prototype: `gaea` wordmark is a **serif** (Georgia/platform serif); purple **accent `#5E60CE`** (links, onboarding art, active dots, "THIS WEEK" card, comment "Post"); exact grays (`#111`/`#262626`/`#8E8E8E`/`#EFEFEF`/`#DBDBDB`/`#F4F4F4`); pins (dropped guess `#E0245E`; result: your-guess black, location pink); medal + weekly-delta colors.
+
+**Screens brought to prototype spec:**
+- **Splash / Feed header / Login** — serif wordmark.
+- **Accuracy overlay (`GuessResult`)** — rebuilt as a **dark full-bleed** overlay (was a white screen): white "NICE GUESS!", optional hint chip, two-pin distance map, points-under-arc page, outlined "SEE LEADERBOARD", photo thumbnail, purple pagination dots. Pin colors corrected.
+- **Compose** — copy: "New post" / "Share to Gaea" / "Add a hint for guessers…".
+- **Profile** — rewritten to the grid + stats + "THIS WEEK" layout (also cleared 5 stale TS errors); points/global rank show "—" pending a profile-stats endpoint.
+- **Login** — tagline, `#FAFAFA` inputs, dark button, "Create account" link.
+- **Onboarding** — replaced the profile-setup form with the 3-step intro carousel (snap → guess → climb) finishing via `completeOnboarding()`.
+
+**Net-new screens added (designed in prototype, no mockup):**
+- **Leaderboard** (`LeaderboardScreen`) — Friends/Global tabs, rank medals, weekly deltas, "you" highlight. Reached from Profile.
+- **Comments** (`CommentsScreen`) — post-context bar, thread, input bar; opened from a post's unlocked "Add a comment…" row.
+
+**Deliberate divergences (kept on purpose):**
+- **Scoring stays server-authoritative** on the PRD §10 curve (`src/game/scoring.ts`); the prototype's inline `5000·e^(…)` is mock-only.
+- **Maps** use `react-native-maps` (native tiles), not the prototype's Leaflet/CartoDB — same behavior (world-start guess, two-pin result), different tech.
+
+**Follow-ups this surfaced (need backend, tracked for later):**
+- **Leaderboard** and **Comments** are UI shells with placeholder data — both need real endpoints (aggregate friends/global ranking; `POST/GET /photos/:id/comments` gated by `hasGuessed`).
+- **Profile stats** need a `GET /users/:id` profile-stats endpoint (points, global rank, weekly delta).
+- **Legacy `GuessScreen`** is now superseded by inline guessing in `PhotoCard`; it still carries the only `react-native-snap-carousel` dependency/type error. Safe to delete once confirmed no route navigates to it.
+
 ## Known follow-ups surfaced during the build
 
 - **Hardcoded Google Maps API key** is committed in `cosmo-mobile/app.json` (iOS + Android + the maps plugin). Restrict it by bundle ID / SHA in the Google Cloud console, and ideally move it to an EAS secret / env injection. It is already in git history — rotate it.

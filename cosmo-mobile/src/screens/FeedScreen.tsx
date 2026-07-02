@@ -18,7 +18,7 @@ import { fetchFeed, refreshFeed } from '../store/slices/feedSlice';
 import { Photo } from '../api/photoApi';
 import PhotoCard from '../components/PhotoCard';
 import BottomNav from '../components/BottomNav';
-import { colors, spacing } from '../theme';
+import { colors, spacing, fonts } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feed'>;
 
@@ -127,10 +127,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   brand: {
+    fontFamily: fonts.brand,
     fontSize: 24,
     fontWeight: '700',
     color: colors.textStrong,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   listContent: {
     paddingBottom: spacing.lg,

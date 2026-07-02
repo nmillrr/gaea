@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 // Get this IP by running 'ipconfig getifaddr en0' on Mac terminal
 // or check your network settings
 const API_URL = Platform.select({
-  ios: 'http://192.168.1.26:4000',  // Your computer's IP address
+  ios: 'http://192.168.1.8:4000',  // Your computer's IP address
   android: 'http://10.0.2.2:4000',  // Android emulator special IP
   default: 'http://localhost:4000'  // Fallback for web
 });

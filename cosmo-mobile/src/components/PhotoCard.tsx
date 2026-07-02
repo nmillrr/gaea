@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  TextInput,
   Dimensions,
   Alert,
 } from 'react-native';
@@ -111,7 +110,14 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo }) => {
           </TouchableOpacity>
         )}
 
-        {result && <GuessResult result={result} onClose={() => setMode('photo')} />}
+        {result && (
+          <GuessResult
+            result={result}
+            thumbUri={photo.s3_url}
+            hint={photo.hint}
+            onClose={() => setMode('photo')}
+          />
+        )}
       </View>
 
       {/* Caption */}
@@ -123,13 +129,13 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo }) => {
 
       {/* Comments — locked until the viewer has guessed */}
       {hasGuessed ? (
-        <View style={styles.commentRow}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Add a comment…"
-            placeholderTextColor={colors.textMuted}
-          />
-        </View>
+        <TouchableOpacity
+          style={styles.commentRow}
+          onPress={() => navigation.navigate('Comments', { photoId: photo.id })}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.commentLocked}>Add a comment…</Text>
+        </TouchableOpacity>
       ) : (
         <TouchableOpacity
           style={styles.commentRow}

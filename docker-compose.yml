@@ -7,7 +7,7 @@ services:
     container_name: cosmo-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cosmo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cosmopassword}

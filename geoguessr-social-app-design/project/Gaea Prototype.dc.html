@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#ECEBE7;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .gscroll{scrollbar-width:none}
+  .gscroll::-webkit-scrollbar{display:none;width:0;height:0}
+  @keyframes gspin{to{transform:rotate(360deg)}}
+  @keyframes gshim{0%{background-position:-320px 0}100%{background-position:320px 0}}
+  @keyframes gfade{from{opacity:0}to{opacity:1}}
+  @keyframes gpop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .gskel{background:#E8E8E8;background-image:linear-gradient(90deg,#E8E8E8 0px,#F2F2F2 40px,#E8E8E8 80px);background-size:320px 100%;animation:gshim 1.3s infinite linear}
+  .leaflet-container{background:#e9e6df;font-family:inherit}
+  .leaflet-control-attribution{display:none}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 16px">
+  <div style="width:419px;height:878px;background:#0b0b0c;border-radius:52px;padding:13px;box-shadow:0 40px 90px -30px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.4),inset 0 0 0 2px #26262a;flex:none">
+    <div style="position:relative;width:393px;height:852px;background:#fff;border-radius:40px;overflow:hidden;display:flex;flex-direction:column">
+
+      <!-- ===== STATUS BAR ===== -->
+      <div style="position:absolute;top:0;left:0;right:0;height:50px;z-index:400;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 34px;pointer-events:none">
+        <span style="font-weight:600;font-size:15px;letter-spacing:.3px;{{ statusColor }}">9:41</span>
+        <span style="display:flex;gap:7px;align-items:center;{{ statusColor }}">
+          <svg width="18" height="11" viewBox="0 0 18 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.5" y="5" width="3" height="6" rx="1"/><rect x="9" y="2.5" width="3" height="8.5" rx="1"/><rect x="13.5" y="0" width="3" height="11" rx="1"/></svg>
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 2.5c2.3 0 4.4.9 6 2.3l1.4-1.5A11 11 0 0 0 8.5.3 11 11 0 0 0 1.1 3.3L2.5 4.8A8.9 8.9 0 0 1 8.5 2.5z"/><path d="M8.5 6.2c1.2 0 2.4.5 3.2 1.3l1.5-1.5a7 7 0 0 0-9.4 0l1.5 1.5A4.6 4.6 0 0 1 8.5 6.2z"/><circle cx="8.5" cy="10" r="1.6"/></svg>
+          <span style="display:inline-flex;align-items:center;gap:2px"><span style="width:22px;height:11px;border:1.4px solid currentColor;border-radius:3px;opacity:.5;display:inline-block;position:relative"><span style="position:absolute;inset:1.5px;width:15px;background:currentColor;border-radius:1px;display:block"></span></span><span style="width:1.6px;height:4px;background:currentColor;border-radius:0 1px 1px 0;opacity:.5"></span></span>
+        </span>
+      </div>
+
+      <!-- ===== INIT ===== -->
+      <sc-if value="{{ isInit }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ skipInit }}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;animation:gfade .4s ease">
+          <span style="font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:38px;color:#111;letter-spacing:.5px">gaea</span>
+        </div>
+      </sc-if>
+
+      <!-- ===== LOADING ===== -->
+      <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#fff">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:center;height:54px;border-bottom:1px solid #EFEFEF;flex:none">
+            <span style="font-family:Georgia,serif;font-weight:700;font-size:24px;color:#000">gaea</span>
+          </div>
+          <div style="flex:1;overflow:hidden">
+            <sc-for list="{{ skeletons }}" as="s" hint-placeholder-count="2">
+              <div style="margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 14px">
+                  <div class="gskel" style="width:32px;height:32px;border-radius:50%"></div>
+                  <div class="gskel" style="width:120px;height:11px;border-radius:6px"></div>
+                </div>
+                <div class="gskel" style="width:393px;height:393px"></div>
+                <div class="gskel" style="width:200px;height:12px;border-radius:6px;margin:14px 14px"></div>
+                <div class="gskel" style="width:140px;height:11px;border-radius:6px;margin:0 14px 14px"></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== FEED ===== -->
+      <sc-if value="{{ isFeed }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#fff;animation:gfade .3s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:54px;border-bottom:1px solid #EFEFEF;flex:none">
+            <div style="width:26px"></div>
+            <span style="font-family:Georgia,serif;font-weight:700;font-size:24px;color:#000;letter-spacing:.3px">gaea</span>
+            <div onClick="{{ goNotifications }}" style="width:26px;height:26px;color:#262626;cursor:pointer">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.4 5.3 2 6H4c.6-.7 2-2 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+            </div>
+          </div>
+
+          <div class="gscroll" style="flex:1;overflow-y:{{ feedOverflow }};overflow-x:hidden">
+            <sc-for list="{{ posts }}" as="post" hint-placeholder-count="3">
+              <div style="margin-bottom:6px">
+                <!-- header -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px">
+                  <div onClick="{{ post.onProfile }}" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                    <div style="width:32px;height:32px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+                    <span style="font-weight:600;font-size:14px;color:#262626">{{ post.user }}</span>
+                    <span style="color:#8E8E8E;font-size:13px">· {{ post.time }}</span>
+                  </div>
+                  <div style="color:#262626"><svg width="20" height="5" viewBox="0 0 20 5" fill="currentColor"><circle cx="2.5" cy="2.5" r="2"/><circle cx="10" cy="2.5" r="2"/><circle cx="17.5" cy="2.5" r="2"/></svg></div>
+                </div>
+
+                <!-- media -->
+                <div style="position:relative;width:393px;height:393px;background:#E8E8E8;overflow:hidden">
+                  <!-- photo -->
+                  <sc-if value="{{ post.isPhoto }}" hint-placeholder-val="{{ true }}">
+                    <img src="{{ post.img }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">
+                    <div onClick="{{ post.onToggleMap }}" style="position:absolute;bottom:12px;right:12px;width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.28);cursor:pointer">
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4c6ef5" stroke-width="1.6"><path d="M9 4 3 6.2v14L9 18l6 2.2 6-2.2v-14L15 6.2 9 4z" fill="#e8f0ff"/><path d="M9 4v14M15 6.2v14"/><circle cx="12" cy="10.5" r="2.4" fill="#40c057" stroke="none"/></svg>
+                    </div>
+                  </sc-if>
+
+                  <!-- MAP GUESS -->
+                  <sc-if value="{{ post.isMap }}" hint-placeholder-val="{{ true }}">
+                    <div id="{{ post.gmapId }}" style="position:absolute;inset:0;z-index:1"></div>
+                    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);pointer-events:none;z-index:500;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="#E0245E"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.6" fill="#fff"/></svg>
+                    </div>
+                    <div onClick="{{ post.onGuess }}" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#1A1A1A;color:#fff;padding:12px 34px;border-radius:999px;font-weight:600;font-size:15px;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer;z-index:500">Guess</div>
+                    <div onClick="{{ post.onToggleMap }}" style="position:absolute;bottom:14px;right:14px;width:44px;height:44px;border-radius:50%;background:rgba(26,26,26,.85);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:500">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 15l5-4 4 3 5-5 4 3"/><circle cx="8.5" cy="9" r="1.6"/></svg>
+                    </div>
+                  </sc-if>
+
+                  <!-- ACCURACY OVERLAY -->
+                  <sc-if value="{{ post.isAccuracy }}" hint-placeholder-val="{{ true }}">
+                    <div onPointerDown="{{ post.onSwipeStart }}" onPointerUp="{{ post.onSwipeEnd }}" style="position:absolute;inset:0;overflow:hidden">
+                      <div id="{{ post.rbgId }}" style="position:absolute;inset:0;z-index:1"></div>
+                      <div style="position:absolute;inset:0;background:rgba(20,20,22,.5);z-index:2"></div>
+
+                      <!-- page 0: distance map -->
+                      <sc-if value="{{ post.accPage0 }}" hint-placeholder-val="{{ true }}">
+                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:26px 20px 0;animation:gfade .25s ease;z-index:3">
+                          <div style="color:#fff;font-size:14px;font-weight:600;letter-spacing:1.5px">NICE GUESS!</div>
+                          <sc-if value="{{ post.hint }}" hint-placeholder-val="{{ true }}">
+                            <div style="display:flex;align-items:center;gap:6px;margin-top:12px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 12px;border-radius:999px;font-size:12.5px;max-width:92%">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg>
+                              {{ post.hint }}
+                            </div>
+                          </sc-if>
+                          <div id="{{ post.rmapId }}" style="width:100%;height:150px;border-radius:12px;overflow:hidden;margin-top:20px;box-shadow:0 6px 20px rgba(0,0,0,.3)"></div>
+                          <div style="color:rgba(255,255,255,.92);text-align:center;font-size:16px;line-height:1.45;margin-top:22px">Your guess was <b style="color:#fff">{{ post.distanceLabel }}</b> from<br>the correct location</div>
+                          <div onClick="{{ post.onOpenLb }}" style="display:flex;align-items:center;gap:9px;margin-top:20px;border:1px solid rgba(255,255,255,.85);color:#fff;padding:11px 22px;border-radius:999px;font-weight:600;font-size:13px;letter-spacing:.8px;cursor:pointer">SEE LEADERBOARD <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+                        </div>
+                      </sc-if>
+
+                      <!-- page 1: points -->
+                      <sc-if value="{{ post.accPage1 }}" hint-placeholder-val="{{ true }}">
+                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:26px 20px 0;animation:gfade .25s ease;z-index:3">
+                          <div style="color:#fff;font-size:14px;font-weight:600;letter-spacing:1.5px">NICE GUESS!</div>
+                          <div style="position:relative;margin-top:14px;width:210px;height:118px;display:flex;align-items:flex-end;justify-content:center">
+                            <svg width="210" height="118" viewBox="0 0 210 118" style="position:absolute;top:0;left:0"><path d="M14 116 A 92 92 0 0 1 196 116" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>
+                            <div style="font-size:52px;font-weight:800;color:#fff;line-height:1;padding-bottom:6px;letter-spacing:-1px">{{ post.pointsLabel }}</div>
+                          </div>
+                          <div style="color:rgba(255,255,255,.92);text-align:center;font-size:16px;line-height:1.45;margin-top:18px">Your guess was <b style="color:#fff">{{ post.distanceLabel }}</b> from<br>the correct location</div>
+                          <div onClick="{{ post.onOpenLb }}" style="display:flex;align-items:center;gap:9px;margin-top:20px;border:1px solid rgba(255,255,255,.85);color:#fff;padding:11px 22px;border-radius:999px;font-weight:600;font-size:13px;letter-spacing:.8px;cursor:pointer">SEE LEADERBOARD <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+                        </div>
+                      </sc-if>
+
+                      <!-- close + dots + thumb -->
+                      <div onClick="{{ post.onCloseOverlay }}" style="position:absolute;top:16px;right:18px;color:#fff;cursor:pointer;z-index:20"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+                      <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:8px;z-index:20">
+                        <div onClick="{{ post.onPage0 }}" style="width:8px;height:8px;border-radius:50%;cursor:pointer;{{ post.dot0 }}"></div>
+                        <div onClick="{{ post.onPage1 }}" style="width:8px;height:8px;border-radius:50%;cursor:pointer;{{ post.dot1 }}"></div>
+                      </div>
+                      <div style="position:absolute;right:14px;bottom:12px;width:58px;height:58px;border-radius:50%;border:3px solid #fff;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.4);z-index:20"><img src="{{ post.img }}" style="width:100%;height:100%;object-fit:cover"></div>
+                    </div>
+                  </sc-if>
+
+                  <!-- PER-POST LEADERBOARD -->
+                  <sc-if value="{{ post.isLeaderboard }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .2s ease">
+                      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EFEFEF;flex:none">
+                        <div onClick="{{ post.onBackToAcc }}" style="cursor:pointer;color:#262626"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+                        <span style="font-weight:700;font-size:15px;color:#111">Leaderboard</span>
+                        <div onClick="{{ post.onCloseOverlay }}" style="cursor:pointer;color:#262626"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+                      </div>
+                      <div class="gscroll" style="flex:1;overflow-y:auto">
+                        <sc-for list="{{ post.leaderboard }}" as="row" hint-placeholder-count="5">
+                          <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F4F4F4;{{ row.rowBg }}">
+                            <span style="width:22px;font-weight:700;color:#8E8E8E;font-size:14px">{{ row.rank }}</span>
+                            <div style="width:34px;height:34px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+                            <span style="flex:1;font-weight:600;font-size:14px;color:#111">{{ row.name }}</span>
+                            <span style="color:#8E8E8E;font-size:12px;margin-right:10px">{{ row.mi }}</span>
+                            <span style="font-weight:700;font-size:14px;color:#111">{{ row.pts }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+
+                <!-- caption -->
+                <div style="padding:8px 14px 2px;font-size:14px;color:#262626;line-height:1.35"><b>{{ post.user }}</b> {{ post.caption }}</div>
+
+                <!-- comment row -->
+                <sc-if value="{{ post.locked }}" hint-placeholder-val="{{ true }}">
+                  <div onClick="{{ post.onToggleMap }}" style="display:flex;align-items:center;gap:7px;padding:9px 14px 14px;cursor:pointer">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8E8E8E" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    <span style="color:#8E8E8E;font-size:13px">Guess the location to unlock comments</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ post.hasResult }}" hint-placeholder-val="{{ true }}">
+                  <div onClick="{{ post.onComments }}" style="padding:9px 14px 14px;cursor:pointer"><span style="color:#8E8E8E;font-size:14px">Add a comment…</span></div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <div style="height:8px"></div>
+          </div>
+
+          <!-- bottom nav -->
+          <div style="display:flex;align-items:center;justify-content:space-around;padding:9px 0 18px;border-top:1px solid #EFEFEF;background:#fff;flex:none">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#000">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.4V21h13V9.4"/></svg>
+              <span style="font-size:10px;font-weight:600">home</span>
+            </div>
+            <div onClick="{{ goCamera }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#262626;cursor:pointer">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="6"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg>
+              <span style="font-size:10px">upload</span>
+            </div>
+            <div onClick="{{ goProfile }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#262626;cursor:pointer">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.5-6 7.5-6s7.5 2 7.5 6"/></svg>
+              <span style="font-size:10px">profile</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== CAMERA ===== -->
+      <sc-if value="{{ isCamera }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#000;overflow:hidden;animation:gfade .25s ease">
+          <img src="assets/casa-batllo.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:150px;display:flex;align-items:center;justify-content:space-between;padding:0 34px">
+            <div onClick="{{ goFeed }}" style="color:#fff;cursor:pointer"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <div onClick="{{ takePhoto }}" style="width:74px;height:74px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer"><div style="width:58px;height:58px;border-radius:50%;background:#fff"></div></div>
+            <div onClick="{{ flipCam }}" style="color:#fff;cursor:pointer"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 13.5-5.8L20 8.5"/><path d="M20 4v4.5h-4.5"/><path d="M20 12a8 8 0 0 1-13.5 5.8L4 15.5"/><path d="M4 20v-4.5h4.5"/></svg></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PROCESSING ===== -->
+      <sc-if value="{{ isProcessing }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#000;padding:66px 16px 16px;animation:gfade .2s ease">
+          <div style="position:relative;width:100%;height:100%;border-radius:20px;overflow:hidden">
+            <img src="assets/casa-batllo.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            <div style="position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+              <div style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;animation:gspin .8s linear infinite"></div>
+              <div style="color:#fff;font-size:16px;font-weight:500">Tagging your location…</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== COMPOSE (pre-upload) ===== -->
+      <sc-if value="{{ isCompose }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EFEFEF;flex:none">
+            <div onClick="{{ goCamera }}" style="cursor:pointer;color:#262626"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <span style="font-weight:700;font-size:17px;color:#111">New post</span>
+            <div style="width:26px"></div>
+          </div>
+          <div class="gscroll" style="flex:1;overflow-y:auto;padding:16px">
+            <img src="assets/casa-batllo.jpg" style="width:100%;height:300px;object-fit:cover;border-radius:16px;background:#E8E8E8">
+            <div style="display:flex;align-items:center;gap:10px;padding:16px 2px;border-bottom:1px solid #EFEFEF">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#262626"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+              <span style="font-size:15px;color:#111;font-weight:500">Passeig de Gràcia, 43<br><span style="color:#8E8E8E;font-weight:400;font-size:13px">Barcelona, Spain · tagged automatically</span></span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:16px 2px;border-bottom:1px solid #EFEFEF">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8E8E8E" stroke-width="1.8" style="margin-top:2px"><path d="M4 20l4-1L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4z"/></svg>
+              <span style="font-size:15px;color:#8E8E8E">Write a caption…</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:16px 2px;border-bottom:1px solid #EFEFEF">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8E8E8E" stroke-width="1.8"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg>
+              <span style="font-size:15px;color:#8E8E8E">Add a hint for guessers…</span>
+            </div>
+          </div>
+          <div onClick="{{ upload }}" style="margin:16px;background:#1A1A1A;color:#fff;padding:16px;border-radius:12px;text-align:center;font-weight:700;font-size:16px;cursor:pointer">Share to Gaea</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== NOTIFICATIONS ===== -->
+      <sc-if value="{{ isNotifications }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;flex:none">
+            <div onClick="{{ goFeed }}" style="cursor:pointer;color:#262626"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <span style="font-weight:700;font-size:18px;color:#111">Activity</span>
+            <div style="width:26px"></div>
+          </div>
+          <div class="gscroll" style="flex:1;overflow-y:auto;padding:4px 0 20px">
+            <sc-for list="{{ notifGroups }}" as="group" hint-placeholder-count="2">
+              <div style="font-weight:700;font-size:17px;color:#111;padding:16px 16px 8px">{{ group.title }}</div>
+              <sc-for list="{{ group.items }}" as="n" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:9px 16px">
+                  <div style="width:44px;height:44px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+                  <div style="flex:1;font-size:14px;color:#262626;line-height:1.35">{{ n.text }}<span style="color:#8E8E8E"> {{ n.detail }}</span><div style="color:#8E8E8E;font-size:12px;margin-top:2px">{{ n.time }}</div></div>
+                  <div style="width:44px;height:44px;border-radius:7px;background:#E8E8E8;flex:none;overflow:hidden"><sc-if value="{{ n.thumb }}" hint-placeholder-val="{{ true }}"><img src="{{ n.thumb }}" style="width:100%;height:100%;object-fit:cover"></sc-if></div>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== LOGIN ===== -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px">
+            <span style="font-family:Georgia,serif;font-weight:700;font-size:46px;color:#111">gaea</span>
+            <div style="color:#8E8E8E;font-size:14.5px;margin-top:8px;text-align:center">Guess the world, one photo at a time.</div>
+            <div style="width:100%;margin-top:36px;display:flex;flex-direction:column;gap:12px">
+              <input placeholder="Username or email" style="width:100%;border:1px solid #DBDBDB;border-radius:10px;padding:14px 14px;font-size:15px;background:#FAFAFA;outline:none;font-family:inherit">
+              <input type="password" placeholder="Password" style="width:100%;border:1px solid #DBDBDB;border-radius:10px;padding:14px 14px;font-size:15px;background:#FAFAFA;outline:none;font-family:inherit">
+              <div onClick="{{ goFeed }}" style="background:#1A1A1A;color:#fff;padding:15px;border-radius:10px;text-align:center;font-weight:700;font-size:15px;cursor:pointer;margin-top:4px">Log in</div>
+            </div>
+            <div style="color:#8E8E8E;font-size:13px;margin-top:18px">Forgot password?</div>
+          </div>
+          <div style="border-top:1px solid #EFEFEF;padding:18px;text-align:center;font-size:14px;color:#262626">New here? <b onClick="{{ goOnboarding }}" style="color:#5E60CE;cursor:pointer">Create account</b></div>
+        </div>
+      </sc-if>
+
+      <!-- ===== ONBOARDING ===== -->
+      <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;justify-content:flex-end;padding:6px 22px;flex:none"><span onClick="{{ goFeed }}" style="color:#8E8E8E;font-size:14px;cursor:pointer">Skip</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 42px;text-align:center">
+            <sc-if value="{{ onb0 }}" hint-placeholder-val="{{ true }}">
+              <div style="width:148px;height:148px;border-radius:50%;background:#F1F0FB;display:flex;align-items:center;justify-content:center;margin-bottom:34px">
+                <svg width="62" height="62" viewBox="0 0 24 24" fill="none" stroke="#5E60CE" stroke-width="1.5"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.6"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+              </div>
+              <div style="font-size:24px;font-weight:800;color:#111">Snap where you are</div>
+              <div style="color:#8E8E8E;font-size:15.5px;line-height:1.5;margin-top:12px">Photos are taken live in-app and tagged with your location automatically — so nobody can fake a spot.</div>
+            </sc-if>
+            <sc-if value="{{ onb1 }}" hint-placeholder-val="{{ true }}">
+              <div style="width:148px;height:148px;border-radius:50%;background:#F1F0FB;display:flex;align-items:center;justify-content:center;margin-bottom:34px">
+                <svg width="62" height="62" viewBox="0 0 24 24" fill="none" stroke="#5E60CE" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 7h14M5 17h14"/></svg>
+              </div>
+              <div style="font-size:24px;font-weight:800;color:#111">Guess where they are</div>
+              <div style="color:#8E8E8E;font-size:15.5px;line-height:1.5;margin-top:12px">Drop a pin anywhere on the world map. The closer your guess, the more points you earn.</div>
+            </sc-if>
+            <sc-if value="{{ onb2 }}" hint-placeholder-val="{{ true }}">
+              <div style="width:148px;height:148px;border-radius:50%;background:#F1F0FB;display:flex;align-items:flex-end;justify-content:center;gap:9px;padding:38px 0 40px;margin-bottom:34px">
+                <div style="width:16px;height:34px;background:#B9B7EA;border-radius:4px 4px 0 0"></div>
+                <div style="width:16px;height:58px;background:#5E60CE;border-radius:4px 4px 0 0"></div>
+                <div style="width:16px;height:24px;background:#B9B7EA;border-radius:4px 4px 0 0"></div>
+              </div>
+              <div style="font-size:24px;font-weight:800;color:#111">Climb the leaderboard</div>
+              <div style="color:#8E8E8E;font-size:15.5px;line-height:1.5;margin-top:12px">Beat your friends and the world. Fresh photos to guess every single day.</div>
+            </sc-if>
+          </div>
+          <div style="display:flex;justify-content:center;gap:7px;padding:6px 0 18px;flex:none">
+            <div style="height:8px;border-radius:99px;transition:width .2s;{{ onbDot0 }}"></div>
+            <div style="height:8px;border-radius:99px;transition:width .2s;{{ onbDot1 }}"></div>
+            <div style="height:8px;border-radius:99px;transition:width .2s;{{ onbDot2 }}"></div>
+          </div>
+          <div onClick="{{ onbNext }}" style="margin:0 22px 26px;background:#1A1A1A;color:#fff;padding:16px;border-radius:12px;text-align:center;font-weight:700;font-size:16px;cursor:pointer;flex:none">{{ onbLabel }}</div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PROFILE ===== -->
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 18px;flex:none">
+            <div style="width:24px"></div>
+            <span style="font-weight:700;font-size:17px;color:#111">{{ profileUser }}</span>
+            <div onClick="{{ goLogin }}" style="cursor:pointer;color:#262626"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3"/><path d="M10 12H3M6 8l-3 4 3 4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="gscroll" style="flex:1;overflow-y:auto">
+            <div style="display:flex;align-items:center;gap:22px;padding:8px 20px 4px">
+              <div style="width:78px;height:78px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+              <div style="flex:1;display:flex;justify-content:space-around">
+                <sc-for list="{{ profileStats }}" as="st" hint-placeholder-count="3">
+                  <div style="text-align:center"><div style="font-weight:800;font-size:19px;color:#111">{{ st.n }}</div><div style="color:#8E8E8E;font-size:12.5px;margin-top:1px">{{ st.l }}</div></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="padding:10px 20px 0">
+              <div style="font-weight:700;font-size:14.5px;color:#111">{{ profileName }}</div>
+              <div style="color:#262626;font-size:13.5px;line-height:1.4;margin-top:2px">{{ profileBio }}</div>
+            </div>
+            <div style="display:flex;gap:8px;padding:14px 20px 6px">
+              <div style="flex:1;text-align:center;border:1px solid #DBDBDB;border-radius:9px;padding:9px 0;font-weight:600;font-size:13.5px;color:#262626">Edit profile</div>
+              <div onClick="{{ goGlobalLb }}" style="flex:1;text-align:center;background:#1A1A1A;color:#fff;border-radius:9px;padding:9px 0;font-weight:600;font-size:13.5px;cursor:pointer">Leaderboard</div>
+            </div>
+            <div style="margin:8px 20px 12px;background:#F2F1FB;border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+              <div><div style="color:#5E60CE;font-size:12px;font-weight:700;letter-spacing:.5px">THIS WEEK</div><div style="color:#111;font-weight:800;font-size:17px;margin-top:2px">+2 ranks · 3,912 pts</div></div>
+              <div style="width:44px;height:44px;border-radius:12px;background:#5E60CE;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 4 7-9"/></svg></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;padding:0 0 12px">
+              <sc-for list="{{ profileGrid }}" as="g" hint-placeholder-count="9">
+                <div style="aspect-ratio:1;background:#E8E8E8;overflow:hidden"><img src="{{ g.img }}" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-around;padding:9px 0 18px;border-top:1px solid #EFEFEF;background:#fff;flex:none">
+            <div onClick="{{ goFeed }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#262626;cursor:pointer">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.4V21h13V9.4"/></svg>
+              <span style="font-size:10px">home</span>
+            </div>
+            <div onClick="{{ goCamera }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#262626;cursor:pointer">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="6"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg>
+              <span style="font-size:10px">upload</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#000">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c0-4 3.5-6 7.5-6s7.5 2 7.5 6z"/></svg>
+              <span style="font-size:10px;font-weight:600">profile</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== GLOBAL LEADERBOARD ===== -->
+      <sc-if value="{{ isGlobalLb }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;flex:none">
+            <div onClick="{{ goProfile }}" style="cursor:pointer;color:#262626"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <span style="font-weight:700;font-size:18px;color:#111">Leaderboard</span>
+            <div style="width:26px"></div>
+          </div>
+          <div style="display:flex;gap:6px;margin:2px 16px 8px;background:#F0F0F0;border-radius:11px;padding:4px;flex:none">
+            <div onClick="{{ onSetFriends }}" style="flex:1;text-align:center;padding:9px 0;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;{{ lbFriendsStyle }}">Friends</div>
+            <div onClick="{{ onSetGlobal }}" style="flex:1;text-align:center;padding:9px 0;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;{{ lbGlobalStyle }}">Global</div>
+          </div>
+          <div class="gscroll" style="flex:1;overflow-y:auto;padding-bottom:20px">
+            <sc-for list="{{ lbRows }}" as="row" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid #F4F4F4;{{ row.rowBg }}">
+                <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;{{ row.medal }}">{{ row.rank }}</div>
+                <div style="width:38px;height:38px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+                <span style="flex:1;font-weight:600;font-size:14.5px;color:#111">{{ row.name }}</span>
+                <span style="font-size:12px;font-weight:600;margin-right:8px;{{ row.deltaColor }}">{{ row.delta }}</span>
+                <span style="font-weight:700;font-size:14.5px;color:#111">{{ row.pts }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== COMMENTS ===== -->
+      <sc-if value="{{ isComments }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;animation:gfade .25s ease">
+          <div style="height:50px;flex:none"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EFEFEF;flex:none">
+            <div onClick="{{ goFeed }}" style="cursor:pointer;color:#262626"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></div>
+            <span style="font-weight:700;font-size:17px;color:#111">Comments</span>
+            <div style="width:26px"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#FAFAFA;border-bottom:1px solid #EFEFEF;flex:none">
+            <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;background:#E8E8E8;flex:none"><img src="{{ commentPost.img }}" style="width:100%;height:100%;object-fit:cover"></div>
+            <div style="flex:1;min-width:0"><div style="font-size:13.5px;color:#262626"><b>{{ commentPost.user }}</b> {{ commentPost.caption }}</div><div style="color:#5E60CE;font-size:11.5px;font-weight:600;margin-top:3px">{{ commentPost.unlockNote }}</div></div>
+          </div>
+          <div class="gscroll" style="flex:1;overflow-y:auto;padding:6px 0">
+            <sc-for list="{{ comments }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 16px">
+                <div style="width:34px;height:34px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+                <div style="flex:1"><div style="font-size:14px;color:#262626;line-height:1.35"><b>{{ c.user }}</b> {{ c.text }}</div><div style="color:#8E8E8E;font-size:12px;margin-top:3px">{{ c.time }} · Reply</div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4C4C4" stroke-width="1.8" style="margin-top:3px"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid #EFEFEF;flex:none">
+            <div style="width:34px;height:34px;border-radius:50%;background:#E4E4E4;flex:none"></div>
+            <input placeholder="Add a comment…" style="flex:1;border:none;outline:none;font-size:14.5px;font-family:inherit;color:#262626">
+            <span style="color:#5E60CE;font-weight:700;font-size:14px">Post</span>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { screen:'init', postView:{}, results:{}, accPage:0, camFacing:'back', activePost:null, lbTab:'friends', onbStep:0 };
+
+  POSTS = [
+    { id:'p1', user:'marco.viajes', time:'2h', img:'assets/casa-batllo.jpg', caption:'Caption game on point', hint:'Gaudí would be proud', actual:{lat:41.3917,lng:2.1650} },
+    { id:'p2', user:'lena.wander', time:'4h', img:'assets/facade-balcony.jpg', caption:'These balconies don\u2019t look real', hint:'', actual:{lat:41.3919,lng:2.1648} },
+    { id:'p3', user:'theo.frames', time:'1d', img:'assets/facade-windows.jpg', caption:'Golden hour on the mosaic', hint:'', actual:{lat:41.3915,lng:2.1652} },
+  ];
+
+  componentDidMount(){
+    this._maps = {};
+    setTimeout(()=>{ if(this.state.screen==='init') this.setState({screen:'loading'}); }, 1400);
+    setTimeout(()=>{ if(this.state.screen==='loading') this.setState({screen:'feed'}); }, 2900);
+    this.syncMaps();
+  }
+  componentDidUpdate(){ this.syncMaps(); }
+
+  go(s){ this.setState({screen:s}); }
+  toggleMap(id){
+    const cur = this.state.postView[id]||'photo';
+    const next = (cur==='map') ? 'photo' : 'map';
+    this.setState({ postView:{...this.state.postView,[id]:next} });
+  }
+  closeOverlay(id){ this.setState({ postView:{...this.state.postView,[id]:'photo'} }); }
+  openLeaderboard(id){ this.setState({ postView:{...this.state.postView,[id]:'leaderboard'} }); }
+  backToAcc(id){ this.setState({ postView:{...this.state.postView,[id]:'accuracy'} }); }
+  setAccPage(n){ this.setState({accPage:n}); }
+
+  haversine(la1,lo1,la2,lo2){
+    const R=6371000,r=Math.PI/180;
+    const dLa=(la2-la1)*r, dLo=(lo2-lo1)*r;
+    const a=Math.sin(dLa/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+  submitGuess(id){
+    const gm = this._maps['gmap-'+id];
+    if(!gm) return;
+    const c = gm.getCenter();
+    const post = this.POSTS.find(p=>p.id===id);
+    const distM = this.haversine(c.lat,c.lng,post.actual.lat,post.actual.lng);
+    const mi = distM/1609.344;
+    const pts = Math.round(5000*Math.exp(-(distM/1000)/99));
+    this.setState({
+      results:{...this.state.results,[id]:{distanceMi:mi,points:pts,guessLat:c.lat,guessLng:c.lng}},
+      postView:{...this.state.postView,[id]:'accuracy'},
+      accPage:0
+    });
+  }
+
+  onSwipeStart(e){ this._sx = e.clientX; }
+  onSwipeEnd(e){ if(this._sx==null) return; const dx=e.clientX-this._sx; if(Math.abs(dx)>40){ this.setState({accPage: dx<0?1:0}); } this._sx=null; }
+
+  takePhoto(){ this.setState({screen:'processing'}); setTimeout(()=>{ if(this.state.screen==='processing') this.setState({screen:'compose'}); }, 1900); }
+  upload(){ this.setState({screen:'feed'}); }
+  openComments(id){ this.setState({screen:'comments', activePost:id}); }
+  onbNext(){ if(this.state.onbStep<2) this.setState({onbStep:this.state.onbStep+1}); else this.setState({screen:'feed'}); }
+
+  distLabel(mi){ return mi<0.1 ? Math.round(mi*1609)+' m' : (mi<10 ? mi.toFixed(1) : Math.round(mi).toLocaleString())+' miles'; }
+
+  leaderboardFor(post, r){
+    const base=[
+      {name:'sofia.rt',pts:4980,miNum:0.3},
+      {name:'kenji.m',pts:4610,miNum:2.4},
+      {name:'amara_k',pts:4120,miNum:9.8},
+      {name:'dan.explore',pts:3450,miNum:47},
+      {name:'yuki.snaps',pts:2870,miNum:120},
+    ];
+    let rows=base.map(b=>({...b, mi:this.distLabel(b.miNum)}));
+    if(r){
+      rows.push({name:'You',pts:r.points,miNum:r.distanceMi,mi:this.distLabel(r.distanceMi),you:true});
+    }
+    rows.sort((a,b)=>b.pts-a.pts);
+    return rows.map((row,i)=>({
+      rank:i+1, name:row.name, pts:row.pts.toLocaleString(), mi:row.mi,
+      rowBg: row.you ? 'background:#F2F1FB' : 'background:#fff'
+    }));
+  }
+
+  // ---- Leaflet ----
+  desiredMaps(){
+    const d={};
+    if(this.state.screen!=='feed') return d;
+    for(const p of this.POSTS){
+      const v=this.state.postView[p.id]||'photo';
+      if(v==='map') d['gmap-'+p.id]={type:'guess',post:p};
+      else if(v==='accuracy'){
+        d['rbg-'+p.id]={type:'bg',post:p};
+        if(this.state.accPage===0) d['rmap-'+p.id]={type:'result',post:p};
+      }
+    }
+    return d;
+  }
+  tiles(){ return window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}); }
+  pinIcon(color,label){
+    const L=window.L;
+    const svg='<svg width="26" height="34" viewBox="0 0 24 32" style="filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))"><path d="M12 0a12 12 0 0 0-12 12c0 9 12 20 12 20s12-11 12-20A12 12 0 0 0 12 0z" fill="'+color+'"/><circle cx="12" cy="12" r="4" fill="#fff"/></svg>';
+    const lab=label?'<div style="margin-top:2px;font:600 11px sans-serif;color:#222;white-space:nowrap;text-shadow:0 1px 2px #fff">'+label+'</div>':'';
+    return L.divIcon({className:'', html:'<div style="display:flex;flex-direction:column;align-items:center">'+svg+lab+'</div>', iconSize:[90,52], iconAnchor:[13,34]});
+  }
+  buildMap(k,cfg){
+    const L=window.L;
+    if(cfg.type==='guess'){
+      const m=L.map(k,{zoomControl:false,attributionControl:false,worldCopyJump:true}).setView([25,5],2);
+      this.tiles().addTo(m); return m;
+    }
+    if(cfg.type==='bg'){
+      const a=cfg.post.actual;
+      const m=L.map(k,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false,keyboard:false,boxZoom:false}).setView([a.lat,a.lng],12);
+      this.tiles().addTo(m); return m;
+    }
+    if(cfg.type==='result'){
+      const r=this.state.results[cfg.post.id]; if(!r) return null;
+      const a=cfg.post.actual, g={lat:r.guessLat,lng:r.guessLng};
+      const m=L.map(k,{zoomControl:false,attributionControl:false}).setView([a.lat,a.lng],4);
+      this.tiles().addTo(m);
+      L.marker([g.lat,g.lng],{icon:this.pinIcon('#1A1A1A','Your guess')}).addTo(m);
+      L.marker([a.lat,a.lng],{icon:this.pinIcon('#E0245E','Location')}).addTo(m);
+      L.polyline([[g.lat,g.lng],[a.lat,a.lng]],{color:'#1A1A1A',weight:2,dashArray:'6 7'}).addTo(m);
+      try{ m.fitBounds(L.latLngBounds([[g.lat,g.lng],[a.lat,a.lng]]),{padding:[34,34],maxZoom:9}); }catch(e){}
+      return m;
+    }
+  }
+  syncMaps(){
+    if(!window.L){ setTimeout(()=>this.syncMaps(),150); return; }
+    this._maps=this._maps||{};
+    const desired=this.desiredMaps();
+    for(const k of Object.keys(this._maps)){
+      if(!desired[k]){ try{this._maps[k].remove();}catch(e){} delete this._maps[k]; }
+    }
+    for(const k of Object.keys(desired)){
+      if(this._maps[k]) continue;
+      const el=document.getElementById(k); if(!el) continue;
+      const m=this.buildMap(k,desired[k]); if(m) this._maps[k]=m;
+    }
+    setTimeout(()=>{ for(const k in this._maps){ try{this._maps[k].invalidateSize();}catch(e){} } },70);
+  }
+
+  renderVals(){
+    const s=this.state;
+    const dark = (s.screen==='camera'||s.screen==='processing'||s.screen==='init');
+    const anyOpen = this.POSTS.some(p=>{ const v=s.postView[p.id]||'photo'; return v!=='photo'; });
+    const posts=this.POSTS.map(p=>{
+      const v=s.postView[p.id]||'photo';
+      const r=s.results[p.id];
+      return {
+        ...p,
+        isPhoto:v==='photo', isMap:v==='map', isAccuracy:v==='accuracy', isLeaderboard:v==='leaderboard',
+        hasResult:!!r, locked:!r,
+        distanceLabel: r? this.distLabel(r.distanceMi):'',
+        pointsLabel: r? r.points.toLocaleString():'',
+        gmapId:'gmap-'+p.id, rbgId:'rbg-'+p.id, rmapId:'rmap-'+p.id,
+        accPage0: s.accPage===0, accPage1: s.accPage===1,
+        dot0: s.accPage===0?'background:#5E60CE;box-shadow:0 0 0 2px rgba(255,255,255,.5)':'background:rgba(255,255,255,.55)',
+        dot1: s.accPage===1?'background:#5E60CE;box-shadow:0 0 0 2px rgba(255,255,255,.5)':'background:rgba(255,255,255,.55)',
+        leaderboard:this.leaderboardFor(p,r),
+        onToggleMap:()=>this.toggleMap(p.id),
+        onGuess:()=>this.submitGuess(p.id),
+        onOpenLb:()=>this.openLeaderboard(p.id),
+        onBackToAcc:()=>this.backToAcc(p.id),
+        onCloseOverlay:()=>this.closeOverlay(p.id),
+        onPage0:()=>this.setAccPage(0),
+        onPage1:()=>this.setAccPage(1),
+        onSwipeStart:(e)=>this.onSwipeStart(e),
+        onSwipeEnd:(e)=>this.onSwipeEnd(e),
+        onProfile:()=>this.go('profile'),
+        onComments:()=>this.openComments(p.id),
+      };
+    });
+    return {
+      isInit:s.screen==='init', isLoading:s.screen==='loading', isFeed:s.screen==='feed',
+      isCamera:s.screen==='camera', isProcessing:s.screen==='processing', isCompose:s.screen==='compose',
+      isNotifications:s.screen==='notifications',
+      isProfile:s.screen==='profile', isGlobalLb:s.screen==='globalLb', isComments:s.screen==='comments',
+      isLogin:s.screen==='login', isOnboarding:s.screen==='onboarding',
+      statusColor: dark? 'color:#fff':'color:#111',
+      feedOverflow: anyOpen? 'hidden':'auto',
+      skeletons:[1,2], posts,
+      notifGroups:[
+        { title:'Today', items:[
+          { text:'sofia.rt', detail:'commented on your post', time:'12m', thumb:'assets/facade-windows.jpg' },
+          { text:'kenji.m', detail:'guessed on your post', time:'40m', thumb:'assets/casa-batllo.jpg' },
+          { text:'amara_k and dan.explore', detail:'guessed on your post', time:'1h', thumb:'assets/facade-balcony.jpg' },
+        ]},
+        { title:'Earlier', items:[
+          { text:'yuki.snaps and 4 others', detail:'guessed on your post', time:'Yesterday', thumb:'assets/casa-batllo.jpg' },
+          { text:'theo.frames and 16 others', detail:'guessed on your post', time:'2d', thumb:'assets/facade-windows.jpg' },
+        ]},
+      ],
+      skipInit:()=>{ if(this.state.screen==='init') this.setState({screen:'loading'}); },
+      goFeed:()=>this.go('feed'), goCamera:()=>this.go('camera'),
+      goProfile:()=>this.go('profile'), goNotifications:()=>this.go('notifications'),
+      takePhoto:()=>this.takePhoto(), upload:()=>this.upload(),
+      flipCam:()=>this.setState({camFacing:this.state.camFacing==='back'?'front':'back'}),
+
+      // profile
+      profileUser:'marco.viajes', profileName:'Marco · Barcelona',
+      profileBio:'Chasing façades and golden hours. One post a day.',
+      profileStats:[{n:'24',l:'posts'},{n:'48,210',l:'points'},{n:'#12',l:'global'}],
+      profileGrid:this.gridImgs(),
+
+      // leaderboard
+      lbFriends:s.lbTab==='friends', lbGlobal:s.lbTab==='global',
+      lbFriendsStyle:s.lbTab==='friends'?'background:#1A1A1A;color:#fff':'background:transparent;color:#8E8E8E',
+      lbGlobalStyle:s.lbTab==='global'?'background:#1A1A1A;color:#fff':'background:transparent;color:#8E8E8E',
+      lbRows:this.lbRows(s.lbTab),
+      onSetFriends:()=>this.setState({lbTab:'friends'}),
+      onSetGlobal:()=>this.setState({lbTab:'global'}),
+
+      // comments
+      commentPost:this.commentPost(s.activePost),
+      comments:[
+        {user:'sofia.rt', text:'So jealous — this is top of my list now.', time:'12m'},
+        {user:'kenji.m', text:'Got it in 3.2 mi, brutal reveal at the end.', time:'40m'},
+        {user:'amara_k', text:'The tilework is unreal in person.', time:'1h'},
+        {user:'theo.frames', text:'Guessed Lisbon. Way off lol.', time:'2h'},
+      ],
+
+      // onboarding
+      onb0:s.onbStep===0, onb1:s.onbStep===1, onb2:s.onbStep===2,
+      onbLabel:s.onbStep<2?'Next':'Get started',
+      onbDot0:s.onbStep===0?'width:22px;background:#1A1A1A':'width:8px;background:#DBDBDB',
+      onbDot1:s.onbStep===1?'width:22px;background:#1A1A1A':'width:8px;background:#DBDBDB',
+      onbDot2:s.onbStep===2?'width:22px;background:#1A1A1A':'width:8px;background:#DBDBDB',
+      onbNext:()=>this.onbNext(),
+
+      goLogin:()=>this.go('login'), goOnboarding:()=>{ this.setState({onbStep:0,screen:'onboarding'}); },
+      goGlobalLb:()=>this.go('globalLb'),
+    };
+  }
+
+  gridImgs(){
+    const imgs=['assets/casa-batllo.jpg','assets/facade-balcony.jpg','assets/facade-windows.jpg'];
+    const out=[]; for(let i=0;i<12;i++) out.push({img:imgs[i%3]}); return out;
+  }
+  commentPost(id){
+    const p=this.POSTS.find(x=>x.id===id)||this.POSTS[0];
+    const r=this.state.results[p.id];
+    return { img:p.img, user:p.user, caption:p.caption, unlockNote: r? ('You guessed '+this.distLabel(r.distanceMi)+' away · comments unlocked') : 'Comments unlocked' };
+  }
+  lbRows(tab){
+    const friends=[
+      {name:'sofia.rt',pts:128940,delta:'+1'},
+      {name:'kenji.m',pts:96110,delta:'0'},
+      {name:'marco.viajes',pts:48210,delta:'+2',you:true},
+      {name:'amara_k',pts:37600,delta:'-1'},
+      {name:'theo.frames',pts:29450,delta:'+3'},
+      {name:'yuki.snaps',pts:21980,delta:'0'},
+      {name:'dan.explore',pts:15340,delta:'-2'},
+    ];
+    const global=[
+      {name:'wanderlei',pts:412300,delta:'0'},
+      {name:'globe_trotter',pts:388120,delta:'+1'},
+      {name:'sofia.rt',pts:128940,delta:'+4'},
+      {name:'mika.k',pts:119880,delta:'-1'},
+      {name:'kenji.m',pts:96110,delta:'0'},
+      {name:'atlas.io',pts:81240,delta:'+2'},
+      {name:'pin_dropper',pts:74650,delta:'-3'},
+      {name:'lena.wander',pts:66120,delta:'+1'},
+      {name:'nomadfolio',pts:58900,delta:'0'},
+      {name:'r.castel',pts:52310,delta:'+5'},
+      {name:'j.okafor',pts:49870,delta:'-2'},
+      {name:'marco.viajes',pts:48210,delta:'+2',you:true},
+    ];
+    const src=tab==='friends'?friends:global;
+    return src.map((r,i)=>({
+      rank:i+1, name:r.name, pts:r.pts.toLocaleString(),
+      delta:r.delta, deltaColor: r.delta.startsWith('+')?'color:#1F8A5B':(r.delta.startsWith('-')?'color:#C0392B':'color:#8E8E8E'),
+      medal: i===0?'background:#E8B84B;color:#3a2e00':(i===1?'background:#C7CBD1;color:#2a2f36':(i===2?'background:#D6A57C;color:#3a1f00':'background:transparent;color:#8E8E8E')),
+      rowBg: r.you?'background:#F2F1FB':'background:#fff'
+    }));
+  }
+}
+</script>
+</body>
+</html>
