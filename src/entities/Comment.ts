@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { User } from "./User";
 import { Photo } from "./Photo";
 
@@ -19,12 +19,15 @@ export class Comment {
   @CreateDateColumn()
   created_at: Date;
 
+  @UpdateDateColumn()
+  updated_at: Date;
+
   // Relations
-  @ManyToOne(() => Photo, (photo) => photo.comments)
+  @ManyToOne(() => Photo, (photo) => photo.comments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "photo_id" })
   photo: Photo;
 
-  @ManyToOne(() => User, (user) => user.comments)
+  @ManyToOne(() => User, (user) => user.comments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "user_id" })
   user: User;
 }

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { RootStackParamList } from '../../App';
 import { photoApi, Photo } from '../api/photoApi';
 import BottomNav from '../components/BottomNav';
 import { colors, spacing, radius } from '../theme';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
@@ -63,7 +63,7 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
         }
       } catch (err) {
         console.error('Error loading profile:', err);
-        Alert.alert('Error', 'Failed to load profile');
+        showAlert('Error', 'Failed to load profile');
       } finally {
         setLoading(false);
       }
@@ -71,7 +71,7 @@ const ProfileScreen: React.FC<Props> = ({ route, navigation }) => {
   }, [userId]);
 
   const handleSignOut = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+    showAlert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign out',

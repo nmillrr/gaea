@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert,
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView
@@ -18,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootState, AppDispatch } from '../store';
 import { register, clearError } from '../store/slices/authSlice';
 import { RootStackParamList } from '../../App';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -45,50 +45,50 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   // Display error message if auth fails
   useEffect(() => {
     if (error) {
-      Alert.alert('Registration Error', error);
+      showAlert('Registration Error', error);
     }
   }, [error]);
-  
+
   const validateInputs = (): boolean => {
     // Basic validation
     if (!email.trim()) {
-      Alert.alert('Error', 'Email is required');
+      showAlert('Error', 'Email is required');
       return false;
     }
-    
+
     if (!username.trim()) {
-      Alert.alert('Error', 'Username is required');
+      showAlert('Error', 'Username is required');
       return false;
     }
-    
+
     if (!password) {
-      Alert.alert('Error', 'Password is required');
+      showAlert('Error', 'Password is required');
       return false;
     }
-    
+
     if (!confirmPassword) {
-      Alert.alert('Error', 'Please confirm your password');
+      showAlert('Error', 'Please confirm your password');
       return false;
     }
-    
+
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return false;
     }
-    
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert('Error', 'Please enter a valid email address');
       return false;
     }
-    
+
     // Password strength validation
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      showAlert('Error', 'Password must be at least 8 characters long');
       return false;
     }
-    
+
     return true;
   };
   

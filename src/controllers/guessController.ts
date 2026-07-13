@@ -4,6 +4,7 @@ import { Photo } from '../entities/Photo';
 import { Guess } from '../entities/Guess';
 import { scoreGuess } from '../game/scoring';
 import { areFriends } from './friendController';
+import { isUuid } from '../utils/validation';
 
 const photoRepository = AppDataSource.getRepository(Photo);
 const guessRepository = AppDataSource.getRepository(Guess);
@@ -12,7 +13,8 @@ const guessRepository = AppDataSource.getRepository(Guess);
 export const submitGuess = async (req: Request, res: Response): Promise<void> => {
   try {
     const { photoId } = req.params;
-    const { guess_lat, guess_lng } = req.body;
+    // Express 5 leaves req.body undefined when no parser handled the request
+    const { guess_lat, guess_lng } = req.body ?? {};
     
     if (!req.user || !req.user.id) {
       res.status(401).json({ message: 'Authentication required' });
@@ -39,27 +41,45 @@ export const submitGuess = async (req: Request, res: Response): Promise<void> =>
     }
     
     // Fetch the photo from the database
-    const photo = await photoRepository.findOne({ where: { id: photoId } });
-    
+    const photo = isUuid(photoId)
+      ? await photoRepository.findOne({ where: { id: photoId } })
+      : null;
+
     if (!photo) {
       res.status(404).json({ message: 'Photo not found' });
       return;
     }
-    
+
     // Check if the user is the owner of the photo or friends with the owner
     const isOwner = photo.user_id === userId;
     if (!isOwner) {
       const isFriend = await areFriends(userId, photo.user_id);
-      
+
       if (!isFriend) {
         res.status(403).json({ message: 'You must be friends with the photo owner to submit a guess' });
         return;
       }
     }
     
-    // Note: The check for existing guesses is now handled by the guessLimitPerPhoto middleware
-    // This keeps the controller focused on business logic rather than rate limiting
-    
+    // One guess per photo per user (checked after validation so bad input
+    // still returns 400; the DB unique constraint is the final backstop)
+    const existingGuess = await guessRepository.findOne({
+      where: { photo_id: photoId, user_id: userId }
+    });
+
+    if (existingGuess) {
+      res.status(429).json({
+        message: 'You have already submitted a guess for this photo',
+        guess: {
+          id: existingGuess.id,
+          distance_m: existingGuess.distance_meters,
+          points: existingGuess.points,
+          created_at: existingGuess.created_at
+        }
+      });
+      return;
+    }
+
     // Calculate score
     const { distance_m, points } = scoreGuess(
       photo.latitude, photo.longitude,
@@ -105,8 +125,10 @@ export const getPhotoGuesses = async (req: Request, res: Response): Promise<void
     const userId = req.user.id;
     
     // Fetch the photo to check if it exists
-    const photo = await photoRepository.findOne({ where: { id: photoId } });
-    
+    const photo = isUuid(photoId)
+      ? await photoRepository.findOne({ where: { id: photoId } })
+      : null;
+
     if (!photo) {
       res.status(404).json({ message: 'Photo not found' });
       return;
@@ -172,8 +194,10 @@ export const getUserGuess = async (req: Request, res: Response): Promise<void> =
     }
     
     // Fetch the photo to check if it exists and that the user can access it
-    const photo = await photoRepository.findOne({ where: { id: photoId } });
-    
+    const photo = isUuid(photoId)
+      ? await photoRepository.findOne({ where: { id: photoId } })
+      : null;
+
     if (!photo) {
       res.status(404).json({ message: 'Photo not found' });
       return;

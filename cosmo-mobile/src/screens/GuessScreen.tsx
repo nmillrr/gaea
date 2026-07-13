@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Image, 
-  ActivityIndicator, 
-  Alert, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
   Dimensions,
   FlatList,
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Temporarily removing MapView to fix the build
-// import MapView, { 
-//   Marker, 
-//   MapPressEvent, 
-//   PROVIDER_GOOGLE, 
-//   Polyline, 
-//   Circle 
+// import MapView, {
+//   Marker,
+//   MapPressEvent,
+//   PROVIDER_GOOGLE,
+//   Polyline,
+//   Circle
 // } from 'react-native-maps';
 import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,6 +25,7 @@ import Carousel from 'react-native-snap-carousel';
 
 import { RootStackParamList } from '../../App';
 import { photoApi, GuessResult, Photo as PhotoType, LeaderboardEntry } from '../api/photoApi';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Guess'>;
 
@@ -50,7 +50,7 @@ const GuessScreen: React.FC<Props> = ({ route, navigation }) => {
       setPhoto(response.photo);
     } catch (error) {
       console.error('Error fetching photo details:', error);
-      Alert.alert('Error', 'Failed to load photo details');
+      showAlert('Error', 'Failed to load photo details');
       navigation.goBack();
     } finally {
       setLoading(false);

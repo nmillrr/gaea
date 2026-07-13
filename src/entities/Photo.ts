@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { User } from "./User";
 import { Guess } from "./Guess";
 import { Comment } from "./Comment";
@@ -30,8 +30,11 @@ export class Photo {
   @CreateDateColumn()
   created_at: Date;
 
+  @UpdateDateColumn()
+  updated_at: Date;
+
   // Relations
-  @ManyToOne(() => User, (user) => user.photos)
+  @ManyToOne(() => User, (user) => user.photos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "user_id" })
   user: User;
 

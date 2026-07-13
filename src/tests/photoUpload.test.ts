@@ -4,25 +4,15 @@ import path from 'path';
 import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { Photo } from '../entities/Photo';
 import { User } from '../entities/User';
 
-// Mock the S3 upload functionality
-jest.mock('../utils/s3', () => ({
-  uploadToS3: {
-    single: () => (req, res, next) => {
-      // Mock the file and S3 upload result
-      req.file = {
-        key: 'test-s3-key',
-        location: 'https://example.com/test-s3-key',
-        mimetype: 'image/jpeg',
-        size: 1024
-      };
-      next();
-    }
-  },
-  getPublicUrl: (key) => `https://example.com/${key}`
-}));
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
+
+// The S3 upload middleware is mocked globally in setupTests.ts
 
 // Mock sharp for image processing
 jest.mock('sharp', () => {
@@ -95,15 +85,13 @@ describe('Photo Upload API', () => {
       expect(res.body).toHaveProperty('latitude', 40.7128);
       expect(res.body).toHaveProperty('longitude', -74.0060);
       expect(res.body).toHaveProperty('created_at');
+
+      // Reset the 24-hour upload window so later tests exercise validation
+      // instead of tripping the photo upload rate limit
+      await AppDataSource.getRepository(Photo).delete({ user_id: testUserId });
     });
 
     it('should return 400 if no file is uploaded', async () => {
-      // Override the mock for this specific test
-      require('../utils/s3').uploadToS3.single = () => (req, res, next) => {
-        req.file = null;
-        next();
-      };
-      
       const res = await request(app)
         .post('/photos')
         .set('Authorization', `Bearer ${authToken}`)
@@ -115,17 +103,6 @@ describe('Photo Upload API', () => {
     });
 
     it('should return 400 if coordinates are missing', async () => {
-      // Restore the mock
-      require('../utils/s3').uploadToS3.single = () => (req, res, next) => {
-        req.file = {
-          key: 'test-s3-key',
-          location: 'https://example.com/test-s3-key',
-          mimetype: 'image/jpeg',
-          size: 1024
-        };
-        next();
-      };
-      
       const res = await request(app)
         .post('/photos')
         .set('Authorization', `Bearer ${authToken}`)

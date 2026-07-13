@@ -2,8 +2,13 @@ import request from 'supertest';
 import app from '../server';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { User } from '../entities/User';
 import { Friendship, FriendshipStatus } from '../entities/Friendship';
+
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
 
 describe('Friends API', () => {
   let user1Token: string;
@@ -184,9 +189,10 @@ describe('Friends API', () => {
     let user3Token: string;
     
     beforeAll(async () => {
-      // Create a third test user
+      // Create a third test user (clean up leftovers from any previous run)
       const userRepository = AppDataSource.getRepository(User);
-      
+      await userRepository.delete({ email: 'friendtest3@example.com' });
+
       const user3 = new User();
       user3.email = 'friendtest3@example.com';
       user3.username = 'friendtest3';

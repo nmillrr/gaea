@@ -1,10 +1,10 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
-import { Provider } from 'react-redux';
-import configureMockStore from 'redux-mock-store';
-import thunk from 'redux-thunk';
-import { NavigationContainer } from '@react-navigation/native';
 import FeedScreen from '../screens/FeedScreen';
+import {
+  renderWithProviders,
+  createMockNavigation,
+  createMockRoute,
+} from './testUtils';
 
 // Mock dependencies
 jest.mock('@react-navigation/native', () => {
@@ -17,15 +17,23 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-// Create mock store
-const middlewares = [thunk];
-const mockStore = configureMockStore(middlewares);
+// Keep the fetchFeed effect from making real network requests
+jest.mock('../api/photoApi', () => ({
+  photoApi: {
+    getFeed: jest.fn(() => Promise.resolve({ photos: [] })),
+  },
+}));
+
+const screenProps = {
+  navigation: createMockNavigation(),
+  route: createMockRoute('Feed'),
+};
 
 describe('FeedScreen Component', () => {
-  test('renders loading state correctly', () => {
-    const initialState = {
+  test('renders loading state correctly', async () => {
+    const { toJSON } = await renderWithProviders(<FeedScreen {...screenProps} />, {
       auth: {
-        user: { id: 'test-id', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
+        user: { id: 'test-id', email: 'test@example.com', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
         isAuthenticated: true,
       },
       feed: {
@@ -34,26 +42,15 @@ describe('FeedScreen Component', () => {
         refreshing: false,
         error: null,
       },
-    };
-    
-    const store = mockStore(initialState);
-    
-    const { toJSON } = render(
-      <Provider store={store}>
-        <NavigationContainer>
-          <FeedScreen />
-        </NavigationContainer>
-      </Provider>
-    );
-    
-    // Snapshot testing
+    });
+
     expect(toJSON()).toMatchSnapshot();
   });
-  
-  test('renders error state correctly', () => {
-    const initialState = {
+
+  test('renders error state correctly', async () => {
+    const { toJSON } = await renderWithProviders(<FeedScreen {...screenProps} />, {
       auth: {
-        user: { id: 'test-id', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
+        user: { id: 'test-id', email: 'test@example.com', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
         isAuthenticated: true,
       },
       feed: {
@@ -62,26 +59,15 @@ describe('FeedScreen Component', () => {
         refreshing: false,
         error: 'Failed to load feed',
       },
-    };
-    
-    const store = mockStore(initialState);
-    
-    const { toJSON } = render(
-      <Provider store={store}>
-        <NavigationContainer>
-          <FeedScreen />
-        </NavigationContainer>
-      </Provider>
-    );
-    
-    // Snapshot testing
+    });
+
     expect(toJSON()).toMatchSnapshot();
   });
-  
-  test('renders empty state correctly', () => {
-    const initialState = {
+
+  test('renders empty state correctly', async () => {
+    const { toJSON } = await renderWithProviders(<FeedScreen {...screenProps} />, {
       auth: {
-        user: { id: 'test-id', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
+        user: { id: 'test-id', email: 'test@example.com', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
         isAuthenticated: true,
       },
       feed: {
@@ -90,23 +76,12 @@ describe('FeedScreen Component', () => {
         refreshing: false,
         error: null,
       },
-    };
-    
-    const store = mockStore(initialState);
-    
-    const { toJSON } = render(
-      <Provider store={store}>
-        <NavigationContainer>
-          <FeedScreen />
-        </NavigationContainer>
-      </Provider>
-    );
-    
-    // Snapshot testing
+    });
+
     expect(toJSON()).toMatchSnapshot();
   });
-  
-  test('renders photos correctly', () => {
+
+  test('renders photos correctly', async () => {
     const mockPhotos = [
       {
         id: 'photo-1',
@@ -128,11 +103,11 @@ describe('FeedScreen Component', () => {
         },
         created_at: '2023-01-02T12:00:00Z',
       },
-    ];
-    
-    const initialState = {
+    ] as any;
+
+    const { toJSON } = await renderWithProviders(<FeedScreen {...screenProps} />, {
       auth: {
-        user: { id: 'test-id', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
+        user: { id: 'test-id', email: 'test@example.com', username: 'testuser', avatarUrl: 'https://example.com/avatar.jpg' },
         isAuthenticated: true,
       },
       feed: {
@@ -141,19 +116,8 @@ describe('FeedScreen Component', () => {
         refreshing: false,
         error: null,
       },
-    };
-    
-    const store = mockStore(initialState);
-    
-    const { toJSON } = render(
-      <Provider store={store}>
-        <NavigationContainer>
-          <FeedScreen />
-        </NavigationContainer>
-      </Provider>
-    );
-    
-    // Snapshot testing
+    });
+
     expect(toJSON()).toMatchSnapshot();
   });
 });

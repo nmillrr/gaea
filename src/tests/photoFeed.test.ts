@@ -2,10 +2,15 @@ import request from 'supertest';
 import app from '../server';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { Photo } from '../entities/Photo';
 import { User } from '../entities/User';
 import { Friendship, FriendshipStatus } from '../entities/Friendship';
 import { Guess } from '../entities/Guess';
+
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
 
 describe('Photo Feed and Leaderboard API', () => {
   let user1Token: string;

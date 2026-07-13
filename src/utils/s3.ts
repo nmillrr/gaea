@@ -1,26 +1,38 @@
-// @ts-nocheck
-import AWS from 'aws-sdk';
+import { S3Client } from '@aws-sdk/client-s3';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
 import path from 'path';
 import { Request } from 'express';
 import crypto from 'crypto';
 
-// Configure AWS SDK
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION
+// Local/dev S3-compatible storage (MinIO from docker-compose) when S3_ENDPOINT is set
+const s3Endpoint = process.env.S3_ENDPOINT
+  ? `${process.env.S3_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.S3_ENDPOINT}:${process.env.S3_PORT || 9000}`
+  : undefined;
+
+// multer-s3 v3 requires an AWS SDK v3 client
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  ...(s3Endpoint
+    ? {
+        endpoint: s3Endpoint,
+        forcePathStyle: true, // MinIO requires path-style URLs
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY || process.env.MINIO_ROOT_USER || 'minioadmin',
+          secretAccessKey: process.env.S3_SECRET_KEY || process.env.MINIO_ROOT_PASSWORD || 'minioadmin'
+        }
+      }
+    : {})
 });
 
-// Create S3 service object
-const s3 = new AWS.S3();
+const bucketName = () =>
+  process.env.AWS_BUCKET_NAME || process.env.S3_BUCKET || process.env.MINIO_BUCKET_NAME || 'cosmo-photos';
 
 // Validate file type
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Accept only image files
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  
+
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -50,7 +62,7 @@ const getDateBasedFolder = () => {
 export const uploadToS3 = multer({
   storage: multerS3({
     s3: s3,
-    bucket: process.env.AWS_BUCKET_NAME || 'cosmo-photos',
+    bucket: bucketName(),
     acl: 'public-read',
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: function (req, file, cb) {
@@ -65,19 +77,12 @@ export const uploadToS3 = multer({
   fileFilter: fileFilter
 });
 
-// Generate a signed URL for an S3 object
-export const getSignedUrl = (key: string): string => {
-  const bucketName = process.env.AWS_BUCKET_NAME || 'cosmo-photos';
-  return s3.getSignedUrl('getObject', {
-    Bucket: bucketName,
-    Key: key,
-    Expires: 60 * 60 * 24 * 7 // 7 days in seconds
-  });
-};
-
 // Generate a public URL for an S3 object
 export const getPublicUrl = (key: string): string => {
-  const bucketName = process.env.AWS_BUCKET_NAME || 'cosmo-photos';
+  if (s3Endpoint) {
+    // Path-style URL served by MinIO
+    return `${s3Endpoint}/${bucketName()}/${key}`;
+  }
   const region = process.env.AWS_REGION || 'us-east-1';
-  return `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+  return `https://${bucketName()}.s3.${region}.amazonaws.com/${key}`;
 };

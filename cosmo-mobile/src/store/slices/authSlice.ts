@@ -38,6 +38,7 @@ interface UpdateProfileData {
 interface AuthResponse {
   user: User;
   token: string;
+  refreshToken?: string;
 }
 
 // Async thunks
@@ -146,6 +147,13 @@ export const authSlice = createSlice({
     clearToken: (state) => {
       state.token = null;
     },
+    // Rehydrate a previously authenticated session (app startup with a valid token)
+    restoreSession: (state, action: PayloadAction<User>) => {
+      state.user = action.payload;
+      state.isAuthenticated = true;
+      state.isLoading = false;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     // Login cases
@@ -225,6 +233,6 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, updateProfile, setOnboardingComplete, setToken, clearToken } = authSlice.actions;
+export const { clearError, updateProfile, setOnboardingComplete, setToken, clearToken, restoreSession } = authSlice.actions;
 
 export default authSlice.reducer;

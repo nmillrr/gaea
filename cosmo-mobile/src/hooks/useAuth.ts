@@ -8,6 +8,7 @@ import {
   setToken,
   setOnboardingComplete,
   clearError,
+  restoreSession,
 } from '../store/slices/authSlice';
 import { LoginCredentials, RegisterCredentials, authApi } from '../api/authApi';
 import {
@@ -59,15 +60,11 @@ export const useAuth = () => {
                 
                 // Update Redux state
                 dispatch(setToken(refreshResponse.token));
-                
-                // Get user profile with new token
+
+                // Get user profile with new token and rehydrate the session
                 const userResponse = await authApi.getUserProfile();
-                const resultAction = await dispatch(loginAction({
-                  email: '', // Not needed as we're already authenticated
-                  password: '', // Not needed as we're already authenticated
-                  __refresh: true // Special flag to indicate this is a token refresh
-                } as any));
-                
+                dispatch(restoreSession(userResponse.user));
+
               } catch (error) {
                 // Refresh token failed
                 console.error('Token refresh failed:', error);
@@ -81,17 +78,11 @@ export const useAuth = () => {
               dispatch(logoutAction());
             }
           } else {
-            // Token is valid, get user profile
+            // Token is valid, get user profile and rehydrate the session
             try {
               const userResponse = await authApi.getUserProfile();
-              
-              // If successful, update the auth state
-              const resultAction = await dispatch(loginAction({
-                email: '', // Not needed as we're already authenticated
-                password: '', // Not needed as we're already authenticated
-                __refresh: true // Special flag to indicate this is a token refresh
-              } as any));
-              
+              dispatch(restoreSession(userResponse.user));
+
             } catch (error) {
               console.error('Failed to get user profile:', error);
               await removeToken();

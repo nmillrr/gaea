@@ -41,9 +41,21 @@ jest.mock('expo-camera', () => ({
   requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
 }));
 
+// Mock icon fonts — the real components drag huge glyph maps into snapshots
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+  MaterialIcons: 'MaterialIcons',
+  FontAwesome: 'FontAwesome',
+}));
+
 // Mock react-native-maps
 jest.mock('react-native-maps', () => 'MapView');
 jest.mock('react-native-maps-directions', () => 'MapViewDirections');
+
+// Provide safe-area insets without needing a real SafeAreaProvider
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default
+);
 
 // Mock navigation
 jest.mock('@react-navigation/native', () => {
@@ -60,13 +72,3 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-// Silence the warning https://github.com/facebook/react-native/issues/11094#issuecomment-263240420
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
-
-// Use fake timers
-jest.useFakeTimers();
-
-// Global teardown
-afterAll(() => {
-  jest.useRealTimers();
-});

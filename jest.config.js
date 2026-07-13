@@ -1,10 +1,10 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.ts'],
+  testMatch: ['<rootDir>/src/tests/**/*.test.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', { isolatedModules: true }],
   },
   collectCoverage: true,
   coverageDirectory: 'coverage',
@@ -14,14 +14,6 @@ module.exports = {
     "/node_modules/",
     "/dist/"
   ],
-  // Set up global variables for tests
-  globals: {
-    'ts-jest': {
-      isolatedModules: true
-    }
-  },
-  // Define test environment variables
-  testEnvironmentVariables: {
-    NODE_ENV: 'test'
-  }
+  // DB-backed suites share one Postgres database; run serially to avoid clobbering
+  maxWorkers: 1,
 };

@@ -5,7 +5,8 @@ import { LoginRequestBody, RegisterRequestBody } from '../types';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const userRepository = AppDataSource.getRepository(User);
+// Resolve the repository lazily so the DataSource can be initialized (or mocked) first
+const userRepository = () => AppDataSource.getRepository(User);
 
 // Generate JWT token for a user
 const generateToken = (user: User): string => {
@@ -31,7 +32,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Check if user already exists
-    const existingUser = await userRepository.findOne({ where: { email } });
+    const existingUser = await userRepository().findOne({ where: { email } });
     if (existingUser) {
       res.status(409).json({ message: 'User with this email already exists' });
       return;
@@ -49,7 +50,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     user.created_at = new Date();
 
     // Save user to database
-    await userRepository.save(user);
+    await userRepository().save(user);
 
     // Generate JWT token
     const token = generateToken(user);
@@ -73,16 +74,20 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 // Login an existing user
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password }: LoginRequestBody = req.body;
+    // "email" doubles as a generic identifier — it may be the account's
+    // email or its username, matching the "Username or email" login field
+    const { email: identifier, password }: LoginRequestBody = req.body;
 
     // Check if required fields are provided
-    if (!email || !password) {
+    if (!identifier || !password) {
       res.status(400).json({ message: 'Email and password are required' });
       return;
     }
 
-    // Find user by email
-    const user = await userRepository.findOne({ where: { email } });
+    // Find user by email or username
+    const user = await userRepository().findOne({
+      where: [{ email: identifier }, { username: identifier }]
+    });
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;

@@ -1,44 +1,30 @@
 import request from 'supertest';
-import { Express } from 'express';
 import { AppDataSource } from '../db/init';
-import { createApp } from '../server';
-import { getPublicUrl } from '../utils/s3';
+import app from '../server';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { User } from '../entities/User';
 import { Photo } from '../entities/Photo';
 import { Guess } from '../entities/Guess';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
-// Mock dependencies
-jest.mock('../utils/s3', () => ({
-  getPublicUrl: jest.fn((key) => `https://mock-s3.example.com/${key}`),
-  uploadToS3: jest.fn(() => Promise.resolve({ key: 'mock-s3-key' })),
-}));
-
-jest.mock('../middleware/photoUpload', () => ({
-  photoUpload: jest.fn((req, res, next) => {
-    req.file = {
-      key: 'mock-photo.jpg',
-      location: 'https://mock-s3.example.com/mock-photo.jpg',
-    } as Express.MulterS3.File;
-    next();
-  }),
-}));
+// The S3 upload middleware is mocked globally in setupTests.ts
 
 describe('API Integration Tests', () => {
-  let app: Express;
   let testUser: User;
   let testUserToken: string;
   let testPhoto: Photo;
 
   beforeAll(async () => {
-    // Initialize app and database connection
-    app = await createApp();
-    
-    // Create test user
+    // Initialize the database connection
+    await ensureTestDb();
+
+    // Create test user (clean up leftovers from any previous run first)
     const userRepository = AppDataSource.getRepository(User);
+    await userRepository.delete({ email: 'test@example.com' });
+    await userRepository.delete({ email: 'newuser@example.com' });
     const passwordHash = await bcrypt.hash('password123', 10);
-    
+
     testUser = new User();
     testUser.email = 'test@example.com';
     testUser.username = 'testuser';
@@ -54,14 +40,15 @@ describe('API Integration Tests', () => {
       { expiresIn: '1h' }
     );
     
-    // Create a test photo
+    // Create a test photo, backdated so it doesn't trip the 24h upload limit
     const photoRepository = AppDataSource.getRepository(Photo);
     testPhoto = new Photo();
     testPhoto.user_id = testUser.id;
     testPhoto.s3_key = 'test-photo.jpg';
     testPhoto.latitude = 40.7128;
     testPhoto.longitude = -74.0060;
-    
+    testPhoto.created_at = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
     await photoRepository.save(testPhoto);
   });
 
@@ -76,7 +63,7 @@ describe('API Integration Tests', () => {
     await userRepository.delete({ id: testUser.id });
     
     // Close database connection
-    await AppDataSource.destroy();
+    await closeTestDb();
   });
 
   describe('Authentication', () => {
@@ -134,6 +121,7 @@ describe('API Integration Tests', () => {
       const response = await request(app)
         .post('/photos')
         .set('Authorization', `Bearer ${testUserToken}`)
+        .attach('photo', Buffer.from('test image data'), 'test.jpg')
         .field('latitude', '37.7749')
         .field('longitude', '-122.4194');
       
@@ -160,7 +148,8 @@ describe('API Integration Tests', () => {
     test('POST /photos should fail without coordinates', async () => {
       const response = await request(app)
         .post('/photos')
-        .set('Authorization', `Bearer ${testUserToken}`);
+        .set('Authorization', `Bearer ${testUserToken}`)
+        .attach('photo', Buffer.from('test image data'), 'test.jpg');
       
       expect(response.status).toBe(400);
       expect(response.body.message).toContain('Coordinates');

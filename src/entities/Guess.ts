@@ -29,11 +29,11 @@ export class Guess {
   created_at: Date;
 
   // Relations
-  @ManyToOne(() => Photo, (photo) => photo.guesses)
+  @ManyToOne(() => Photo, (photo) => photo.guesses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "photo_id" })
   photo: Photo;
 
-  @ManyToOne(() => User, (user) => user.guesses)
+  @ManyToOne(() => User, (user) => user.guesses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "user_id" })
   user: User;
 }

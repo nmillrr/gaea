@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +18,7 @@ import { RootStackParamList } from '../../App';
 import { RootState, AppDispatch } from '../store';
 import { submitGuess } from '../store/slices/guessesSlice';
 import { colors, spacing } from '../theme';
+import { showAlert } from '../utils/alert';
 import MapGuess from './MapGuess';
 import GuessResult from './GuessResult';
 
@@ -65,7 +65,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo }) => {
       await dispatch(submitGuess({ photoId: photo.id, location: coords })).unwrap();
       setMode('photo');
     } catch (err) {
-      Alert.alert('Could not submit guess', String(err));
+      showAlert('Could not submit guess', String(err));
+      setMode('photo');
     }
   };
 

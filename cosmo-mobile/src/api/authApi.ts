@@ -84,51 +84,20 @@ export const authApi = {
    * Update user profile
    */
   updateProfile: async (data: UpdateProfileData): Promise<ProfileResponse> => {
-    console.log('Updating profile with data:', JSON.stringify(data));
-    try {
-      const response = await axiosInstance.put('/api/users/me', data);
-      console.log('Profile update response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Profile update error:', error);
-      // For testing purposes, return a mock response if the API fails
-      return {
-        user: {
-          id: '123',
-          email: 'test@example.com',
-          username: data.username || 'testuser',
-          avatarUrl: data.avatarUrl
-        }
-      };
-    }
+    const response = await axiosInstance.put('/api/users/me', data);
+    return response.data;
   },
 
   /**
    * Upload user avatar
    */
   uploadAvatar: async (formData: FormData): Promise<UploadAvatarResponse> => {
-    console.log('Uploading avatar with formData:', 
-      Array.from(formData.entries()).map(([key, value]) => 
-        `${key}: ${typeof value === 'string' ? value : 'File object'}`
-      ).join(', ')
-    );
-    
-    // Simplified approach: Skip avatar upload for now 
-    // Return a placeholder URL for testing
-    const placeholderUrl = 'https://via.placeholder.com/150';
-    console.log('Using placeholder avatar URL for debugging:', placeholderUrl);
-    
-    // For quick testing, bypass the actual upload
-    return { avatarUrl: placeholderUrl };
-    
-    /* Commented out for debugging
     const response = await axiosInstance.post('/api/users/me/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
-    */
   },
 
   /**

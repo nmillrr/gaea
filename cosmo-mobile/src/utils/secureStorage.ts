@@ -1,50 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
 
 // Keys for storing the JWT token and refresh token
 const TOKEN_KEY = 'gaea_jwt_token';
 const REFRESH_TOKEN_KEY = 'gaea_refresh_token';
 const TOKEN_EXPIRY_KEY = 'gaea_token_expiry';
-// Encryption key (ideally this would be generated and stored in the keychain)
-const ENCRYPTION_KEY = 'gaea_secure_app_key';
-
-/**
- * Encrypt a string value (for AsyncStorage fallback)
- */
-const encrypt = async (text: string): Promise<string> => {
-  // In a real app, you would use a more sophisticated encryption approach
-  // This is a very simple implementation for demo purposes
-  const iv = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    Math.random().toString(),
-    { encoding: Crypto.CryptoEncoding.HEX }
-  );
-  
-  const encrypted = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    text + ENCRYPTION_KEY + iv,
-    { encoding: Crypto.CryptoEncoding.HEX }
-  );
-  
-  return JSON.stringify({ encrypted, iv });
-};
-
-/**
- * Decrypt an encrypted string (for AsyncStorage fallback)
- */
-const decrypt = async (encryptedData: string): Promise<string | null> => {
-  try {
-    // In a real app, you would use a more sophisticated decryption approach
-    // This mock implementation assumes the original text was stored
-    const { encrypted, iv } = JSON.parse(encryptedData);
-    return encrypted;
-  } catch (error) {
-    console.error('Error decrypting data:', error);
-    return null;
-  }
-};
 
 /**
  * Determines if the device supports SecureStore
@@ -55,16 +16,16 @@ const isSecureStoreAvailable = (): boolean => {
 };
 
 /**
- * Sets a value in secure storage with fallback to encrypted AsyncStorage
+ * Sets a value in secure storage. On web there is no keychain equivalent, so
+ * the value is kept in AsyncStorage (localStorage) as-is — do not store
+ * anything beyond session tokens here.
  */
 const setSecureItem = async (key: string, value: string): Promise<void> => {
   try {
     if (isSecureStoreAvailable()) {
       await SecureStore.setItemAsync(key, value);
     } else {
-      // Fallback to encrypted AsyncStorage
-      const encryptedValue = await encrypt(value);
-      await AsyncStorage.setItem(key, encryptedValue);
+      await AsyncStorage.setItem(key, value);
     }
   } catch (error) {
     console.error(`Error storing ${key}:`, error);
@@ -80,10 +41,7 @@ const getSecureItem = async (key: string): Promise<string | null> => {
     if (isSecureStoreAvailable()) {
       return await SecureStore.getItemAsync(key);
     } else {
-      // Fallback to encrypted AsyncStorage
-      const encryptedValue = await AsyncStorage.getItem(key);
-      if (!encryptedValue) return null;
-      return await decrypt(encryptedValue);
+      return await AsyncStorage.getItem(key);
     }
   } catch (error) {
     console.error(`Error retrieving ${key}:`, error);

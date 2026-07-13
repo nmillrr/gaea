@@ -64,6 +64,9 @@ describe('Authentication Middleware', () => {
 
 describe('JWT Token Generation', () => {
   it('should validate JWT token format', () => {
+    // Use the real library here — jsonwebtoken is mocked at the top of this file
+    const realJwt: typeof jwt = jest.requireActual('jsonwebtoken');
+
     // Mock a user
     const mockUser = {
       id: '123456',
@@ -71,14 +74,14 @@ describe('JWT Token Generation', () => {
     };
 
     // Generate a token
-    const token = jwt.sign(
+    const token = realJwt.sign(
       { id: mockUser.id, email: mockUser.email },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
 
     // Verify the token can be decoded
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string };
+    const decoded = realJwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string };
     expect(decoded.id).toBe(mockUser.id);
     expect(decoded.email).toBe(mockUser.email);
   });

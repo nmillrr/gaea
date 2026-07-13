@@ -2,9 +2,14 @@ import request from 'supertest';
 import app from '../server';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { User } from '../entities/User';
 import { Photo } from '../entities/Photo';
 import { Guess } from '../entities/Guess';
+
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
 
 describe('Rate Limiting', () => {
   let userToken: string;
@@ -27,17 +32,10 @@ describe('Rate Limiting', () => {
     
     const savedUser = await userRepository.save(user);
     userId = savedUser.id;
-    
-    // Create a test photo
-    const photo = new Photo();
-    photo.user_id = userId;
-    photo.s3_key = 'rate-limit-test-photo';
-    photo.latitude = 40.7128;
-    photo.longitude = -74.0060;
-    
-    const savedPhoto = await photoRepository.save(photo);
-    photoId = savedPhoto.id;
-    
+
+    // Make sure the user has no photos yet so the first upload is allowed
+    await photoRepository.delete({ user_id: userId });
+
     // Generate a JWT token
     userToken = jwt.sign(
       { id: userId, email: 'ratelimit@example.com' },
@@ -60,29 +58,25 @@ describe('Rate Limiting', () => {
 
   describe('Photo Upload Rate Limiting', () => {
     it('should allow first photo upload', async () => {
-      // Mock the S3 upload middleware
-      jest.mock('../utils/s3', () => ({
-        uploadToS3: {
-          single: () => (req, res, next) => {
-            req.file = { key: 'mock-s3-key' };
-            next();
-          }
-        }
-      }));
-      
+      // S3 uploads are mocked globally in setupTests.ts
       const res = await request(app)
         .post('/photos')
         .set('Authorization', `Bearer ${userToken}`)
+        .attach('photo', Buffer.from('test image data'), 'test.jpg')
         .field('latitude', '40.7128')
         .field('longitude', '-74.0060');
-        
+
       expect(res.status).toBe(201);
+
+      // The guess rate-limit tests below reuse this photo
+      photoId = res.body.id;
     });
 
     it('should reject second photo upload within 24 hours', async () => {
       const res = await request(app)
         .post('/photos')
         .set('Authorization', `Bearer ${userToken}`)
+        .attach('photo', Buffer.from('test image data'), 'test.jpg')
         .field('latitude', '40.7128')
         .field('longitude', '-74.0060');
         
@@ -144,9 +138,9 @@ describe('Rate Limiting', () => {
           password: 'password123'
         });
         
-      // Check for rate limit headers
-      expect(res.headers).toHaveProperty('x-ratelimit-limit');
-      expect(res.headers).toHaveProperty('x-ratelimit-remaining');
+      // Check for (draft standard) rate limit headers; legacy X- headers are disabled
+      expect(res.headers).toHaveProperty('ratelimit-limit');
+      expect(res.headers).toHaveProperty('ratelimit-remaining');
     });
   });
 });

@@ -26,7 +26,7 @@ export class Group {
   created_at: Date;
 
   // Relations
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "owner_id" })
   owner: User;
 

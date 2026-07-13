@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { Photo } from "./Photo";
 import { Guess } from "./Guess";
 import { Comment } from "./Comment";
@@ -23,6 +23,9 @@ export class User {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 
   // Relations
   @OneToMany(() => Photo, (photo) => photo.user)

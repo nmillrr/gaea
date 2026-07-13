@@ -1,0 +1,176 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GuessScreen Component renders guess location selected state correctly 1`] = `
+<RNCSafeAreaView
+  edges={
+    {
+      "bottom": "additive",
+      "left": "additive",
+      "right": "additive",
+      "top": "additive",
+    }
+  }
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+    }
+  }
+>
+  <ActivityIndicator
+    color="#3498db"
+    size="large"
+  />
+  <Text
+    style={
+      {
+        "color": "#666",
+        "marginTop": 10,
+      }
+    }
+  >
+    Loading photo...
+  </Text>
+</RNCSafeAreaView>
+`;
+
+exports[`GuessScreen Component renders loading state correctly 1`] = `
+<RNCSafeAreaView
+  edges={
+    {
+      "bottom": "additive",
+      "left": "additive",
+      "right": "additive",
+      "top": "additive",
+    }
+  }
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+    }
+  }
+>
+  <ActivityIndicator
+    color="#3498db"
+    size="large"
+  />
+  <Text
+    style={
+      {
+        "color": "#666",
+        "marginTop": 10,
+      }
+    }
+  >
+    Loading photo...
+  </Text>
+</RNCSafeAreaView>
+`;
+
+exports[`GuessScreen Component renders map selection state correctly 1`] = `
+<RNCSafeAreaView
+  edges={
+    {
+      "bottom": "additive",
+      "left": "additive",
+      "right": "additive",
+      "top": "additive",
+    }
+  }
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+    }
+  }
+>
+  <ActivityIndicator
+    color="#3498db"
+    size="large"
+  />
+  <Text
+    style={
+      {
+        "color": "#666",
+        "marginTop": 10,
+      }
+    }
+  >
+    Loading photo...
+  </Text>
+</RNCSafeAreaView>
+`;
+
+exports[`GuessScreen Component renders results state correctly 1`] = `
+<RNCSafeAreaView
+  edges={
+    {
+      "bottom": "additive",
+      "left": "additive",
+      "right": "additive",
+      "top": "additive",
+    }
+  }
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+    }
+  }
+>
+  <ActivityIndicator
+    color="#3498db"
+    size="large"
+  />
+  <Text
+    style={
+      {
+        "color": "#666",
+        "marginTop": 10,
+      }
+    }
+  >
+    Loading photo...
+  </Text>
+</RNCSafeAreaView>
+`;
+
+exports[`GuessScreen Component renders submitting guess state correctly 1`] = `
+<RNCSafeAreaView
+  edges={
+    {
+      "bottom": "additive",
+      "left": "additive",
+      "right": "additive",
+      "top": "additive",
+    }
+  }
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+    }
+  }
+>
+  <ActivityIndicator
+    color="#3498db"
+    size="large"
+  />
+  <Text
+    style={
+      {
+        "color": "#666",
+        "marginTop": 10,
+      }
+    }
+  >
+    Loading photo...
+  </Text>
+</RNCSafeAreaView>
+`;

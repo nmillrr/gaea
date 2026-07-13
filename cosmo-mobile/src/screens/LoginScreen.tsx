@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -18,11 +17,13 @@ import { RootState, AppDispatch } from '../store';
 import { login, clearError } from '../store/slices/authSlice';
 import { RootStackParamList } from '../../App';
 import { colors, spacing, radius, fonts } from '../theme';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  // Holds either the account's email or its username — the backend accepts both.
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
 
@@ -38,16 +39,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   }, [isAuthenticated, navigation]);
 
   useEffect(() => {
-    if (error && hasAttemptedLogin) Alert.alert('Login Error', error);
+    if (error && hasAttemptedLogin) showAlert('Login Error', error);
   }, [error, hasAttemptedLogin]);
 
   const handleLogin = () => {
-    if (!email.trim()) return Alert.alert('Error', 'Email is required');
-    if (!password) return Alert.alert('Error', 'Password is required');
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return Alert.alert('Error', 'Please enter a valid email address');
+    if (!identifier.trim()) return showAlert('Error', 'Username or email is required');
+    if (!password) return showAlert('Error', 'Password is required');
     setHasAttemptedLogin(true);
-    dispatch(login({ email, password }));
+    dispatch(login({ email: identifier.trim(), password }));
   };
 
   return (
@@ -65,10 +64,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               style={styles.input}
               placeholder="Username or email"
               placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={setEmail}
+              value={identifier}
+              onChangeText={setIdentifier}
               autoCapitalize="none"
-              keyboardType="email-address"
+              autoCorrect={false}
               testID="email-input"
             />
             <TextInput

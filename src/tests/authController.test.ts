@@ -116,10 +116,37 @@ describe('Auth Controller', () => {
     it('should return 401 if user does not exist', async () => {
       mockUserRepository.findOne.mockResolvedValue(null);
       await login(mockRequest as Request, mockResponse as Response);
-      
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({ where: { email: 'test@example.com' } });
+
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: [{ email: 'test@example.com' }, { username: 'test@example.com' }]
+      });
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
+    });
+
+    it('should allow logging in with a username instead of an email', async () => {
+      mockRequest.body = { email: 'testuser', password: 'password123' };
+      const user = {
+        id: '123',
+        email: 'test@example.com',
+        username: 'testuser',
+        password_hash: 'hashed_password'
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(user);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await login(mockRequest as Request, mockResponse as Response);
+
+      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
+        where: [{ email: 'testuser' }, { username: 'testuser' }]
+      });
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: 'Login successful',
+        token: 'mock-token',
+        user: expect.objectContaining({ username: 'testuser' })
+      });
     });
 
     it('should return 401 if password is incorrect', async () => {

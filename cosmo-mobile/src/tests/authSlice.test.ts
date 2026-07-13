@@ -1,4 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
+
+type AuthPreload = Partial<ReturnType<typeof authReducer>>;
 import authReducer, { 
   login, 
   logout, 
@@ -24,19 +26,37 @@ jest.mock('../utils/secureStorage', () => ({
 import { authApi } from '../api/authApi';
 import { saveToken, removeToken } from '../utils/secureStorage';
 
+const makeStore = (auth?: AuthPreload) =>
+  configureStore({
+    reducer: {
+      auth: authReducer
+    },
+    ...(auth
+      ? {
+          preloadedState: {
+            auth: {
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+              error: null,
+              onboardingComplete: false,
+              token: null,
+              ...auth
+            }
+          }
+        }
+      : {})
+  });
+
 describe('Auth Slice', () => {
-  let store: ReturnType<typeof configureStore>;
-  
+  let store: ReturnType<typeof makeStore>;
+
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
-    
+
     // Create a fresh store for each test
-    store = configureStore({
-      reducer: {
-        auth: authReducer
-      }
-    });
+    store = makeStore();
   });
   
   describe('Login Flow', () => {
@@ -140,18 +160,9 @@ describe('Auth Slice', () => {
   describe('Logout', () => {
     it('should clear auth state on logout', async () => {
       // Set an authenticated state first
-      store = configureStore({
-        reducer: {
-          auth: authReducer
-        },
-        preloadedState: {
-          auth: {
-            user: { id: '123', email: 'test@example.com', username: 'testuser' },
-            isAuthenticated: true,
-            isLoading: false,
-            error: null
-          }
-        }
+      store = makeStore({
+        user: { id: '123', email: 'test@example.com', username: 'testuser' },
+        isAuthenticated: true
       });
       
       // Dispatch logout action
@@ -170,18 +181,8 @@ describe('Auth Slice', () => {
   describe('Error Handling', () => {
     it('should clear error when clearError action is dispatched', () => {
       // Set an error state first
-      store = configureStore({
-        reducer: {
-          auth: authReducer
-        },
-        preloadedState: {
-          auth: {
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-            error: 'Some error message'
-          }
-        }
+      store = makeStore({
+        error: 'Some error message'
       });
       
       // Dispatch clearError action

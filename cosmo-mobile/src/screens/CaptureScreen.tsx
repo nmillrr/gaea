@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -33,6 +32,7 @@ import {
   checkUploadAllowed,
 } from '../store/slices/captureSlice';
 import { colors, radius, spacing } from '../theme';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Capture'>;
 
@@ -91,7 +91,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
   }, [uploadSuccess, navigation]);
 
   useEffect(() => {
-    if (error) Alert.alert('Error', error);
+    if (error) showAlert('Error', error);
   }, [error]);
 
   /** Capture the photo, then collect + reverse-geocode the location. */
@@ -106,7 +106,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
       setStage('compose');
     } catch (err) {
       console.error('Error taking picture:', err);
-      Alert.alert('Error', 'Failed to take picture');
+      showAlert('Error', 'Failed to take picture');
       setStage('camera');
     }
   };
@@ -134,7 +134,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
       }
     } catch (err) {
       console.error('Error getting location:', err);
-      Alert.alert(
+      showAlert(
         'Location Error',
         'Unable to get your location. Make sure location services are enabled.',
       );
@@ -143,7 +143,7 @@ const CaptureScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleUpload = () => {
     if (!photoUri || !location) {
-      Alert.alert('Error', 'Photo or location data is missing');
+      showAlert('Error', 'Photo or location data is missing');
       return;
     }
     dispatch(

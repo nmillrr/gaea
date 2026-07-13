@@ -7,7 +7,8 @@ import path from 'path';
 import fs from 'fs';
 
 const router = express.Router();
-const userRepository = AppDataSource.getRepository(User);
+// Resolve the repository lazily so the DataSource can be initialized (or mocked) first
+const userRepository = () => AppDataSource.getRepository(User);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -45,13 +46,14 @@ const upload = multer({
 router.get('/users/me', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await userRepository.findOne({ where: { id: userId } });
-    
+    const user = await userRepository().findOne({ where: { id: userId } });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
-    
-    res.json({ 
+
+    res.json({
       user: {
         id: user.id,
         email: user.email,
@@ -70,18 +72,19 @@ router.put('/users/me', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
     const { username, avatarUrl } = req.body;
-    
-    const user = await userRepository.findOne({ where: { id: userId } });
-    
+
+    const user = await userRepository().findOne({ where: { id: userId } });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
-    
+
     // Update fields if provided
     if (username) user.username = username;
     if (avatarUrl) user.avatar_url = avatarUrl;
-    
-    await userRepository.save(user);
+
+    await userRepository().save(user);
     
     res.json({ 
       user: {
@@ -100,40 +103,28 @@ router.put('/users/me', authenticateJWT, async (req, res) => {
 // Upload avatar
 router.post('/users/me/avatar', authenticateJWT, upload.single('avatar'), async (req, res) => {
   try {
-    console.log('[Avatar Upload] Request received', {
-      body: req.body,
-      file: req.file,
-      user: req.user,
-      headers: req.headers,
-    });
-    
     if (!req.file) {
-      console.log('[Avatar Upload] No file uploaded');
-      return res.status(400).json({ message: 'No file uploaded' });
+      res.status(400).json({ message: 'No file uploaded' });
+      return;
     }
-    
+
     const userId = req.user.id;
-    console.log(`[Avatar Upload] Looking up user ${userId}`);
-    
-    const user = await userRepository.findOne({ where: { id: userId } });
-    
+    const user = await userRepository().findOne({ where: { id: userId } });
+
     if (!user) {
-      console.log(`[Avatar Upload] User ${userId} not found`);
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
     
     // Create public URL for avatar (adjust path based on your server setup)
     const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 4000}`;
     const avatarRelativePath = `/uploads/avatars/${req.file.filename}`;
     const avatarUrl = `${serverUrl}${avatarRelativePath}`;
-    
-    console.log(`[Avatar Upload] Saving avatar URL: ${avatarUrl}`);
-    
+
     // Update user with new avatar URL
     user.avatar_url = avatarUrl;
-    await userRepository.save(user);
-    
-    console.log(`[Avatar Upload] Avatar saved successfully for user ${userId}`);
+    await userRepository().save(user);
+
     res.json({ avatarUrl });
   } catch (error) {
     console.error('[Avatar Upload] Error:', error);
@@ -145,13 +136,14 @@ router.post('/users/me/avatar', authenticateJWT, upload.single('avatar'), async 
 router.get('/auth/verify', authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await userRepository.findOne({ where: { id: userId } });
-    
+    const user = await userRepository().findOne({ where: { id: userId } });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return;
     }
-    
-    res.json({ 
+
+    res.json({
       valid: true,
       user: {
         id: user.id,

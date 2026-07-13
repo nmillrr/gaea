@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  Image, 
+import {
+  StyleSheet,
+  View,
+  Text,
+  Image,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '../../App';
 import axiosInstance from '../api/axios';
+import { showAlert } from '../utils/alert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PhotoDetail'>;
 
@@ -82,7 +82,7 @@ const PhotoDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       setLeaderboard(leaderboardResponse.data.leaderboard);
     } catch (error) {
       console.error('Error fetching photo details:', error);
-      Alert.alert('Error', 'Failed to load photo details');
+      showAlert('Error', 'Failed to load photo details');
       navigation.goBack();
     } finally {
       setLoading(false);

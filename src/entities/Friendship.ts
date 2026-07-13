@@ -1,4 +1,4 @@
-import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn, PrimaryColumn } from "typeorm";
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, PrimaryColumn } from "typeorm";
 import { User } from "./User";
 
 export enum FriendshipStatus {
@@ -24,12 +24,15 @@ export class Friendship {
   @CreateDateColumn()
   created_at: Date;
 
+  @UpdateDateColumn()
+  updated_at: Date;
+
   // Relations
-  @ManyToOne(() => User, (user) => user.friendships)
+  @ManyToOne(() => User, (user) => user.friendships, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "user_id" })
   user: User;
 
-  @ManyToOne(() => User, (user) => user.friendOf)
+  @ManyToOne(() => User, (user) => user.friendOf, { onDelete: 'CASCADE' })
   @JoinColumn({ name: "friend_id" })
   friend: User;
 }

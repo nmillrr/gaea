@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../server';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { User } from '../entities/User';
 
 // Mock the notifications service
@@ -12,6 +13,10 @@ jest.mock('../services/notifications', () => ({
 
 // Import the mocked service
 import { sendTestNotification, registerDeviceToken } from '../services/notifications';
+
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
 
 describe('Notifications API', () => {
   let userToken: string;

@@ -16,6 +16,8 @@ export interface RegisterRequestBody {
 }
 
 export interface LoginRequestBody {
+  // Accepts either the account's email or its username (field name kept
+  // as "email" for wire compatibility with existing clients).
   email: string;
   password: string;
 }

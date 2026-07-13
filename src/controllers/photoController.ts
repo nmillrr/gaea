@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { In } from 'typeorm';
 import { AppDataSource } from '../db/init';
 import { Photo } from '../entities/Photo';
 import { User } from '../entities/User';
@@ -6,6 +7,7 @@ import { Guess } from '../entities/Guess';
 import { Friendship, FriendshipStatus } from '../entities/Friendship';
 import { getPublicUrl } from '../utils/s3';
 import { areFriends } from './friendController';
+import { isUuid } from '../utils/validation';
 import fs from 'fs';
 import util from 'util';
 import path from 'path';
@@ -36,10 +38,13 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
     let latitude: number;
     let longitude: number;
     
+    // Express 5 leaves req.body undefined when no parser handled the request
+    const body = req.body ?? {};
+
     // Check if coordinates are provided in the request body
-    if (req.body.latitude && req.body.longitude) {
-      latitude = parseFloat(req.body.latitude);
-      longitude = parseFloat(req.body.longitude);
+    if (body.latitude && body.longitude) {
+      latitude = parseFloat(body.latitude);
+      longitude = parseFloat(body.longitude);
       
       // Validate coordinates
       if (isNaN(latitude) || isNaN(longitude) ||
@@ -60,9 +65,9 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<void> =>
     photo.latitude = latitude;
     photo.longitude = longitude;
     // Optional caption / hint; trim and cap length to match the columns.
-    const caption = typeof req.body.caption === 'string' ? req.body.caption.trim() : '';
+    const caption = typeof body.caption === 'string' ? body.caption.trim() : '';
     photo.caption = caption ? caption.slice(0, 200) : null;
-    const hint = typeof req.body.hint === 'string' ? req.body.hint.trim() : '';
+    const hint = typeof body.hint === 'string' ? body.hint.trim() : '';
     photo.hint = hint ? hint.slice(0, 200) : null;
 
     // Save to database
@@ -160,9 +165,9 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
     }
     
     const photoId = req.params.id;
-    const photo = await photoRepository.findOne({
-      where: { id: photoId }
-    });
+    const photo = isUuid(photoId)
+      ? await photoRepository.findOne({ where: { id: photoId } })
+      : null;
 
     if (!photo) {
       res.status(404).json({ message: 'Photo not found' });
@@ -171,15 +176,25 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
     
     // Check if the current user is the owner of the photo
     const isOwner = photo.user_id === req.user.id;
-    
+
     // If not the owner, check if they are friends
     if (!isOwner) {
       const isFriend = await areFriends(req.user.id, photo.user_id);
-      
+
       if (!isFriend) {
         res.status(403).json({ message: 'You must be friends with the photo owner to view this photo' });
         return;
       }
+    }
+
+    // The location is the puzzle answer — only reveal it to the owner or to
+    // viewers who have already submitted their guess
+    let revealLocation = isOwner;
+    if (!revealLocation) {
+      const viewerGuess = await guessRepository.findOne({
+        where: { photo_id: photo.id, user_id: req.user.id }
+      });
+      revealLocation = Boolean(viewerGuess);
     }
 
     res.json({
@@ -187,8 +202,8 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       s3_url: getPublicUrl(photo.s3_key),
       caption: photo.caption,
       hint: photo.hint,
-      latitude: photo.latitude,
-      longitude: photo.longitude,
+      latitude: revealLocation ? photo.latitude : null,
+      longitude: revealLocation ? photo.longitude : null,
       created_at: photo.created_at,
       user_id: photo.user_id
     });
@@ -243,7 +258,7 @@ export const getPhotoFeed = async (req: Request, res: Response): Promise<void> =
     
     // Get the total count of photos from friends
     const totalCount = await photoRepository.count({
-      where: { user_id: { $in: friendIds } as any }
+      where: { user_id: In(friendIds) }
     });
     
     // Query for photos from friends
@@ -318,10 +333,10 @@ export const getPhotoLeaderboard = async (req: Request, res: Response): Promise<
     const skip = (page - 1) * pageSize;
     
     // Get the photo to check if it exists and to get the owner
-    const photo = await photoRepository.findOne({
-      where: { id: photoId }
-    });
-    
+    const photo = isUuid(photoId)
+      ? await photoRepository.findOne({ where: { id: photoId } })
+      : null;
+
     if (!photo) {
       res.status(404).json({ message: 'Photo not found' });
       return;

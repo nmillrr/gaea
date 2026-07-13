@@ -68,7 +68,7 @@ services:
       sleep 10;
       mc alias set cosmo-minio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
       mc mb --ignore-existing cosmo-minio/${MINIO_BUCKET_NAME:-cosmo-uploads};
-      mc policy set public cosmo-minio/${MINIO_BUCKET_NAME:-cosmo-uploads};
+      mc anonymous set download cosmo-minio/${MINIO_BUCKET_NAME:-cosmo-uploads};
       exit 0;
       "
 

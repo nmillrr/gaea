@@ -1,17 +1,11 @@
 module.exports = {
+  // jest-expo supplies the babel transform and transformIgnorePatterns
+  // needed for Expo SDK / React Native packages; react-redux ships ESM so it
+  // must be transformed too
   preset: 'jest-expo',
-  testEnvironment: 'node',
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': [
-      'babel-jest',
-      {
-        presets: ['babel-preset-expo'],
-      },
-    ],
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transformIgnorePatterns: [
-    'node_modules/(?!(jest-)?@?react-native|react-native|@react-native-community|@react-navigation|expo-.*|@expo(nent)?/.*|react-navigation-.*|@unimodules/.*|unimodules|native-base|react-native-svg)',
+    '/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|react-redux))',
+    '/node_modules/react-native-reanimated/plugin/',
   ],
   collectCoverage: true,
   coverageDirectory: 'coverage',
@@ -26,5 +20,4 @@ module.exports = {
     '<rootDir>/.expo/',
   ],
   testMatch: ['<rootDir>/src/tests/**/*.test.{js,jsx,ts,tsx}'],
-  snapshotSerializers: ['@emotion/jest/serializer'],
 };

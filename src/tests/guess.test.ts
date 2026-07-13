@@ -2,9 +2,14 @@ import request from 'supertest';
 import app from '../server';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/init';
+import { ensureTestDb, closeTestDb } from './testDb';
 import { Photo } from '../entities/Photo';
 import { Guess } from '../entities/Guess';
 import { User } from '../entities/User';
+
+// Connect to the test database before any suite-level setup runs
+beforeAll(() => ensureTestDb());
+afterAll(() => closeTestDb());
 
 describe('Guess API', () => {
   let authToken: string;
