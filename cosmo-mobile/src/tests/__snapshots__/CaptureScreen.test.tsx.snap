@@ -4,17 +4,212 @@ exports[`CaptureScreen Component renders camera view correctly 1`] = `
 <View
   style={
     {
-      "alignItems": "center",
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#000",
       "flex": 1,
-      "justifyContent": "center",
     }
   }
 >
-  <ActivityIndicator
-    color="#1A1A1A"
-    size="large"
+  <CameraView
+    facing="back"
+    ref={
+      {
+        "current": <CameraView
+          facing="back"
+          ref={[Circular]}
+          style={
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            }
+          }
+        />,
+      }
+    }
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
   />
+  <RNCSafeAreaView
+    edges={
+      {
+        "bottom": "additive",
+        "left": "additive",
+        "right": "additive",
+        "top": "additive",
+      }
+    }
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+        "justifyContent": "space-between",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingHorizontal": 16,
+          "paddingTop": 12,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="close"
+          size={30}
+        />
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="camera-reverse-outline"
+          size={30}
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "paddingBottom": 24,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderColor": "#fff",
+            "borderRadius": 37,
+            "borderWidth": 4,
+            "height": 74,
+            "justifyContent": "center",
+            "opacity": 1,
+            "width": 74,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#fff",
+              "borderRadius": 29,
+              "height": 58,
+              "width": 58,
+            }
+          }
+        />
+      </View>
+    </View>
+  </RNCSafeAreaView>
 </View>
 `;
 
@@ -235,17 +430,212 @@ exports[`CaptureScreen Component renders loading state correctly 1`] = `
 <View
   style={
     {
-      "alignItems": "center",
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#000",
       "flex": 1,
-      "justifyContent": "center",
     }
   }
 >
-  <ActivityIndicator
-    color="#1A1A1A"
-    size="large"
+  <CameraView
+    facing="back"
+    ref={
+      {
+        "current": <CameraView
+          facing="back"
+          ref={[Circular]}
+          style={
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            }
+          }
+        />,
+      }
+    }
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
   />
+  <RNCSafeAreaView
+    edges={
+      {
+        "bottom": "additive",
+        "left": "additive",
+        "right": "additive",
+        "top": "additive",
+      }
+    }
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+        "justifyContent": "space-between",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingHorizontal": 16,
+          "paddingTop": 12,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="close"
+          size={30}
+        />
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="camera-reverse-outline"
+          size={30}
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "paddingBottom": 24,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderColor": "#fff",
+            "borderRadius": 37,
+            "borderWidth": 4,
+            "height": 74,
+            "justifyContent": "center",
+            "opacity": 1,
+            "width": 74,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#fff",
+              "borderRadius": 29,
+              "height": 58,
+              "width": 58,
+            }
+          }
+        />
+      </View>
+    </View>
+  </RNCSafeAreaView>
 </View>
 `;
 
@@ -253,17 +643,212 @@ exports[`CaptureScreen Component renders preview state correctly 1`] = `
 <View
   style={
     {
-      "alignItems": "center",
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#000",
       "flex": 1,
-      "justifyContent": "center",
     }
   }
 >
-  <ActivityIndicator
-    color="#1A1A1A"
-    size="large"
+  <CameraView
+    facing="back"
+    ref={
+      {
+        "current": <CameraView
+          facing="back"
+          ref={[Circular]}
+          style={
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            }
+          }
+        />,
+      }
+    }
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
   />
+  <RNCSafeAreaView
+    edges={
+      {
+        "bottom": "additive",
+        "left": "additive",
+        "right": "additive",
+        "top": "additive",
+      }
+    }
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+        "justifyContent": "space-between",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingHorizontal": 16,
+          "paddingTop": 12,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="close"
+          size={30}
+        />
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="camera-reverse-outline"
+          size={30}
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "paddingBottom": 24,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderColor": "#fff",
+            "borderRadius": 37,
+            "borderWidth": 4,
+            "height": 74,
+            "justifyContent": "center",
+            "opacity": 1,
+            "width": 74,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#fff",
+              "borderRadius": 29,
+              "height": 58,
+              "width": 58,
+            }
+          }
+        />
+      </View>
+    </View>
+  </RNCSafeAreaView>
 </View>
 `;
 
@@ -271,16 +856,211 @@ exports[`CaptureScreen Component renders uploading state correctly 1`] = `
 <View
   style={
     {
-      "alignItems": "center",
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#000",
       "flex": 1,
-      "justifyContent": "center",
     }
   }
 >
-  <ActivityIndicator
-    color="#1A1A1A"
-    size="large"
+  <CameraView
+    facing="back"
+    ref={
+      {
+        "current": <CameraView
+          facing="back"
+          ref={[Circular]}
+          style={
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            }
+          }
+        />,
+      }
+    }
+    style={
+      {
+        "bottom": 0,
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
   />
+  <RNCSafeAreaView
+    edges={
+      {
+        "bottom": "additive",
+        "left": "additive",
+        "right": "additive",
+        "top": "additive",
+      }
+    }
+    pointerEvents="box-none"
+    style={
+      {
+        "flex": 1,
+        "justifyContent": "space-between",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingHorizontal": 16,
+          "paddingTop": 12,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="close"
+          size={30}
+        />
+      </View>
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        hitSlop={8}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "opacity": 1,
+          }
+        }
+      >
+        <Ionicons
+          color="#fff"
+          name="camera-reverse-outline"
+          size={30}
+        />
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "paddingBottom": 24,
+        }
+      }
+    >
+      <View
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderColor": "#fff",
+            "borderRadius": 37,
+            "borderWidth": 4,
+            "height": 74,
+            "justifyContent": "center",
+            "opacity": 1,
+            "width": 74,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#fff",
+              "borderRadius": 29,
+              "height": 58,
+              "width": 58,
+            }
+          }
+        />
+      </View>
+    </View>
+  </RNCSafeAreaView>
 </View>
 `;
